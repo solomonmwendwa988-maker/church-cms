@@ -1,5 +1,5 @@
 {
-  "name": "church-cms-backend",
+  "name": "victory-cms-backend",
   "version": "1.0.0",
   "description": "Victory Life CMS Backend",
   "main": "server.js",
@@ -12,6 +12,7 @@
     "dotenv": "^16.3.1",
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "socket.io": "^4.7.2"
   }
 }
