@@ -2,7 +2,7 @@
 // AUTHENTICATION - JWT with Backend
 // ============================================
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://church-cms-api-11h5.onrender.com/api';
 
 function isAuthenticated() {
     const token = localStorage.getItem('token');

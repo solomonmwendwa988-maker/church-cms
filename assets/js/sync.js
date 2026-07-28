@@ -3,7 +3,7 @@
 // ============================================
 
 const Sync = {
-    apiUrl: 'http://localhost:5000/api',
+    apiUrl: 'https://church-cms-api-11h5.onrender.com/api',
     socket: null,
     isConnected: false,
     syncInterval: null,
