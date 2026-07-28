@@ -12,6 +12,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ============================================
+// DATABASE CONNECTION
+// ============================================
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -25,8 +29,16 @@ pool.connect((err) => {
     }
 });
 
+// ============================================
+// MIDDLEWARE
+// ============================================
+
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
+
+// ============================================
+// HTTP SERVER & SOCKET.IO
+// ============================================
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -36,18 +48,23 @@ const io = socketIo(server, {
     }
 });
 
-let onlineUsers = {};
+// Track online users
+var onlineUsers = {};
+
+// ============================================
+// AUTH MIDDLEWARE
+// ============================================
 
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    var authHeader = req.headers['authorization'];
+    var token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        var decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
         next();
     } catch (error) {
@@ -55,8 +72,57 @@ function authenticateToken(req, res, next) {
     }
 }
 
+// ============================================
+// WEBSOCKET EVENTS
+// ============================================
+
+io.on('connection', function(socket) {
+    console.log('Client connected:', socket.id);
+
+    socket.on('user_online', function(userData) {
+        onlineUsers[socket.id] = {
+            userId: userData.userId,
+            name: userData.name,
+            role: userData.role,
+            connectedAt: new Date().toISOString()
+        };
+        var usersList = Object.values(onlineUsers);
+        io.emit('users_online', usersList);
+        console.log('User online:', userData.name, 'Total:', usersList.length);
+    });
+
+    socket.on('join', function(userId) {
+        socket.join('user_' + userId);
+        console.log('User joined room:', userId);
+    });
+
+    socket.on('disconnect', function() {
+        var user = onlineUsers[socket.id];
+        if (user) {
+            console.log('User offline:', user.name);
+            delete onlineUsers[socket.id];
+            var usersList = Object.values(onlineUsers);
+            io.emit('users_online', usersList);
+        }
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// ============================================
+// BROADCAST HELPERS
+// ============================================
+
+function broadcastEvent(eventName, data) {
+    io.emit(eventName, data);
+    console.log('Broadcast:', eventName);
+}
+
+// ============================================
+// INIT DATABASE TABLES
+// ============================================
+
 async function initDatabase() {
-    const queries = [
+    var queries = [
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -199,9 +265,9 @@ async function initDatabase() {
         )`
     ];
 
-    for (const query of queries) {
+    for (var i = 0; i < queries.length; i++) {
         try {
-            await pool.query(query);
+            await pool.query(queries[i]);
         } catch (err) {
             console.log('Table creation warning:', err.message);
         }
@@ -210,62 +276,37 @@ async function initDatabase() {
     console.log('Database tables initialized');
 }
 
-io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
+// ============================================
+// HEALTH CHECK
+// ============================================
 
-    socket.on('user_online', (userData) => {
-        onlineUsers[socket.id] = {
-            userId: userData.userId,
-            name: userData.name,
-            role: userData.role,
-            connectedAt: new Date().toISOString()
-        };
-        const usersList = Object.values(onlineUsers);
-        io.emit('users_online', usersList);
-    });
-
-    socket.on('join', (userId) => {
-        socket.join(`user_${userId}`);
-    });
-
-    socket.on('disconnect', () => {
-        delete onlineUsers[socket.id];
-        const usersList = Object.values(onlineUsers);
-        io.emit('users_online', usersList);
-        console.log('Client disconnected:', socket.id);
-    });
-});
-
-function broadcastEvent(eventName, data) {
-    io.emit(eventName, data);
-    console.log('Broadcast:', eventName);
-}
-
-app.get('/api/health', (req, res) => {
+app.get('/api/health', function(req, res) {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/auth/register', async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body;
+// ============================================
+// AUTH ROUTES
+// ============================================
 
-        const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+app.post('/api/auth/register', async function(req, res) {
+    try {
+        var { name, email, password, role } = req.body;
+
+        var existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        var salt = await bcrypt.genSalt(10);
+        var hashedPassword = await bcrypt.hash(password, salt);
 
-        const result = await pool.query(
-            `INSERT INTO users (name, email, password, role) 
-             VALUES ($1, $2, $3, $4) 
-             RETURNING id, name, email, role, status, created_at`,
+        var result = await pool.query(
+            'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, status, created_at',
             [name, email, hashedPassword, role || 'member']
         );
 
-        const user = result.rows[0];
-        const token = jwt.sign(
+        var user = result.rows[0];
+        var token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
@@ -273,51 +314,58 @@ app.post('/api/auth/register', async (req, res) => {
 
         broadcastEvent('user_created', user);
 
-        res.json({ user, token });
+        res.json({ user: user, token: token });
     } catch (error) {
         console.error('Register error:', error);
         res.status(500).json({ error: 'Registration failed' });
     }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async function(req, res) {
     try {
-        const { email, password } = req.body;
+        var { email, password } = req.body;
 
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
+        var result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        var user = result.rows[0];
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
+        var validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign(
+        var token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
-        const { password: _, ...userWithoutPassword } = user;
+        var userWithoutPassword = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            created_at: user.created_at
+        };
 
-        res.json({ user: userWithoutPassword, token });
+        res.json({ user: userWithoutPassword, token: token });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Login failed' });
     }
 });
 
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/auth/me', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query(
+        var result = await pool.query(
             'SELECT id, name, email, role, status, created_at FROM users WHERE id = $1',
             [req.user.id]
         );
-        const user = result.rows[0];
+        var user = result.rows[0];
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -327,25 +375,27 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/members', authenticateToken, async (req, res) => {
+// ============================================
+// MEMBERS ROUTES
+// ============================================
+
+app.get('/api/members', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM members ORDER BY created_at DESC');
+        var result = await pool.query('SELECT * FROM members ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get members' });
     }
 });
 
-app.post('/api/members', authenticateToken, async (req, res) => {
+app.post('/api/members', authenticateToken, async function(req, res) {
     try {
-        const { first_name, last_name, email, phone, address, join_date, status, membership_type, notes } = req.body;
-        const result = await pool.query(
-            `INSERT INTO members (first_name, last_name, email, phone, address, join_date, status, membership_type, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-             RETURNING *`,
+        var { first_name, last_name, email, phone, address, join_date, status, membership_type, notes } = req.body;
+        var result = await pool.query(
+            'INSERT INTO members (first_name, last_name, email, phone, address, join_date, status, membership_type, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
             [first_name, last_name, email, phone, address, join_date || new Date().toISOString().split('T')[0], status || 'Active', membership_type || 'Full', notes]
         );
-        const member = result.rows[0];
+        var member = result.rows[0];
         broadcastEvent('member_created', member);
         res.status(201).json(member);
     } catch (error) {
@@ -354,16 +404,12 @@ app.post('/api/members', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/members/:id', authenticateToken, async (req, res) => {
+app.put('/api/members/:id', authenticateToken, async function(req, res) {
     try {
-        const id = parseInt(req.params.id);
-        const { first_name, last_name, email, phone, address, join_date, status, membership_type, notes } = req.body;
-        const result = await pool.query(
-            `UPDATE members SET 
-                first_name = $1, last_name = $2, email = $3, phone = $4, address = $5, 
-                join_date = $6, status = $7, membership_type = $8, notes = $9,
-                updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $10 RETURNING *`,
+        var id = parseInt(req.params.id);
+        var { first_name, last_name, email, phone, address, join_date, status, membership_type, notes } = req.body;
+        var result = await pool.query(
+            'UPDATE members SET first_name = $1, last_name = $2, email = $3, phone = $4, address = $5, join_date = $6, status = $7, membership_type = $8, notes = $9, updated_at = CURRENT_TIMESTAMP WHERE id = $10 RETURNING *',
             [first_name, last_name, email, phone, address, join_date, status, membership_type, notes, id]
         );
         if (result.rows.length === 0) {
@@ -376,36 +422,38 @@ app.put('/api/members/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/members/:id', authenticateToken, async (req, res) => {
+app.delete('/api/members/:id', authenticateToken, async function(req, res) {
     try {
-        const id = parseInt(req.params.id);
+        var id = parseInt(req.params.id);
         await pool.query('DELETE FROM members WHERE id = $1', [id]);
-        broadcastEvent('member_deleted', { id });
+        broadcastEvent('member_deleted', { id: id });
         res.json({ message: 'Member deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete member' });
     }
 });
 
-app.get('/api/events', authenticateToken, async (req, res) => {
+// ============================================
+// EVENTS ROUTES
+// ============================================
+
+app.get('/api/events', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM events ORDER BY start_date ASC');
+        var result = await pool.query('SELECT * FROM events ORDER BY start_date ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get events' });
     }
 });
 
-app.post('/api/events', authenticateToken, async (req, res) => {
+app.post('/api/events', authenticateToken, async function(req, res) {
     try {
-        const { title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes } = req.body;
-        const result = await pool.query(
-            `INSERT INTO events (title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
-             RETURNING *`,
+        var { title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes } = req.body;
+        var result = await pool.query(
+            'INSERT INTO events (title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
             [title, description, category || 'Service', start_date, end_date, start_time, end_time, venue, capacity || 0, status || 'Upcoming', speaker, notes]
         );
-        const event = result.rows[0];
+        var event = result.rows[0];
         broadcastEvent('event_created', event);
         res.status(201).json(event);
     } catch (error) {
@@ -413,16 +461,12 @@ app.post('/api/events', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/api/events/:id', authenticateToken, async (req, res) => {
+app.put('/api/events/:id', authenticateToken, async function(req, res) {
     try {
-        const id = parseInt(req.params.id);
-        const { title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes } = req.body;
-        const result = await pool.query(
-            `UPDATE events SET 
-                title = $1, description = $2, category = $3, start_date = $4, end_date = $5, 
-                start_time = $6, end_time = $7, venue = $8, capacity = $9, status = $10, speaker = $11, notes = $12,
-                updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $13 RETURNING *`,
+        var id = parseInt(req.params.id);
+        var { title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes } = req.body;
+        var result = await pool.query(
+            'UPDATE events SET title = $1, description = $2, category = $3, start_date = $4, end_date = $5, start_time = $6, end_time = $7, venue = $8, capacity = $9, status = $10, speaker = $11, notes = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13 RETURNING *',
             [title, description, category, start_date, end_date, start_time, end_time, venue, capacity, status, speaker, notes, id]
         );
         if (result.rows.length === 0) {
@@ -435,36 +479,38 @@ app.put('/api/events/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/events/:id', authenticateToken, async (req, res) => {
+app.delete('/api/events/:id', authenticateToken, async function(req, res) {
     try {
-        const id = parseInt(req.params.id);
+        var id = parseInt(req.params.id);
         await pool.query('DELETE FROM events WHERE id = $1', [id]);
-        broadcastEvent('event_deleted', { id });
+        broadcastEvent('event_deleted', { id: id });
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete event' });
     }
 });
 
-app.get('/api/giving', authenticateToken, async (req, res) => {
+// ============================================
+// GIVING ROUTES
+// ============================================
+
+app.get('/api/giving', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM giving ORDER BY date DESC');
+        var result = await pool.query('SELECT * FROM giving ORDER BY date DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get giving records' });
     }
 });
 
-app.post('/api/giving', authenticateToken, async (req, res) => {
+app.post('/api/giving', authenticateToken, async function(req, res) {
     try {
-        const { member_id, member_name, amount, category, payment_method, date, receipt_number, notes } = req.body;
-        const result = await pool.query(
-            `INSERT INTO giving (member_id, member_name, amount, category, payment_method, date, receipt_number, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-             RETURNING *`,
+        var { member_id, member_name, amount, category, payment_method, date, receipt_number, notes } = req.body;
+        var result = await pool.query(
+            'INSERT INTO giving (member_id, member_name, amount, category, payment_method, date, receipt_number, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
             [member_id, member_name, amount, category || 'Tithe', payment_method || 'Cash', date || new Date().toISOString().split('T')[0], receipt_number, notes]
         );
-        const giving = result.rows[0];
+        var giving = result.rows[0];
         broadcastEvent('giving_created', giving);
         res.status(201).json(giving);
     } catch (error) {
@@ -472,30 +518,31 @@ app.post('/api/giving', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/users', authenticateToken, async (req, res) => {
+// ============================================
+// USERS ROUTES (Admin Only)
+// ============================================
+
+app.get('/api/users', authenticateToken, async function(req, res) {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
-        const result = await pool.query(
-            'SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC'
-        );
+        var result = await pool.query('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get users' });
     }
 });
 
-app.put('/api/users/:id', authenticateToken, async (req, res) => {
+app.put('/api/users/:id', authenticateToken, async function(req, res) {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
-        const id = parseInt(req.params.id);
-        const { name, email, role, status } = req.body;
-        const result = await pool.query(
-            `UPDATE users SET name = $1, email = $2, role = $3, status = $4, updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $5 RETURNING id, name, email, role, status`,
+        var id = parseInt(req.params.id);
+        var { name, email, role, status } = req.body;
+        var result = await pool.query(
+            'UPDATE users SET name = $1, email = $2, role = $3, status = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING id, name, email, role, status',
             [name, email, role, status, id]
         );
         if (result.rows.length === 0) {
@@ -508,39 +555,41 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:id', authenticateToken, async function(req, res) {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
-        const id = parseInt(req.params.id);
+        var id = parseInt(req.params.id);
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
-        broadcastEvent('user_deleted', { id });
+        broadcastEvent('user_deleted', { id: id });
         res.json({ message: 'User deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete user' });
     }
 });
 
-app.get('/api/mpesa', authenticateToken, async (req, res) => {
+// ============================================
+// M-PESA ROUTES
+// ============================================
+
+app.get('/api/mpesa', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM mpesa_transactions ORDER BY created_at DESC');
+        var result = await pool.query('SELECT * FROM mpesa_transactions ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get M-Pesa transactions' });
     }
 });
 
-app.post('/api/mpesa', authenticateToken, async (req, res) => {
+app.post('/api/mpesa', authenticateToken, async function(req, res) {
     try {
-        const { transaction_id, phone, amount, type, description, status } = req.body;
-        const result = await pool.query(
-            `INSERT INTO mpesa_transactions (transaction_id, phone, amount, type, description, status) 
-             VALUES ($1, $2, $3, $4, $5, $6) 
-             RETURNING *`,
+        var { transaction_id, phone, amount, type, description, status } = req.body;
+        var result = await pool.query(
+            'INSERT INTO mpesa_transactions (transaction_id, phone, amount, type, description, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
             [transaction_id, phone, amount, type || 'general', description, status || 'pending']
         );
-        const transaction = result.rows[0];
+        var transaction = result.rows[0];
         broadcastEvent('mpesa_transaction', transaction);
         res.status(201).json(transaction);
     } catch (error) {
@@ -548,25 +597,27 @@ app.post('/api/mpesa', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/sermons', authenticateToken, async (req, res) => {
+// ============================================
+// SERMONS ROUTES
+// ============================================
+
+app.get('/api/sermons', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM sermons ORDER BY date DESC');
+        var result = await pool.query('SELECT * FROM sermons ORDER BY date DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get sermons' });
     }
 });
 
-app.post('/api/sermons', authenticateToken, async (req, res) => {
+app.post('/api/sermons', authenticateToken, async function(req, res) {
     try {
-        const { title, series, preacher, date, description, scripture, notes, audio_url, duration, status } = req.body;
-        const result = await pool.query(
-            `INSERT INTO sermons (title, series, preacher, date, description, scripture, notes, audio_url, duration, status) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-             RETURNING *`,
+        var { title, series, preacher, date, description, scripture, notes, audio_url, duration, status } = req.body;
+        var result = await pool.query(
+            'INSERT INTO sermons (title, series, preacher, date, description, scripture, notes, audio_url, duration, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
             [title, series, preacher, date || new Date().toISOString().split('T')[0], description, scripture, notes, audio_url, duration, status || 'published']
         );
-        const sermon = result.rows[0];
+        var sermon = result.rows[0];
         broadcastEvent('sermon_created', sermon);
         res.status(201).json(sermon);
     } catch (error) {
@@ -574,25 +625,27 @@ app.post('/api/sermons', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/prayer-requests', authenticateToken, async (req, res) => {
+// ============================================
+// PRAYER REQUESTS ROUTES
+// ============================================
+
+app.get('/api/prayer-requests', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM prayer_requests ORDER BY created_at DESC');
+        var result = await pool.query('SELECT * FROM prayer_requests ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get prayer requests' });
     }
 });
 
-app.post('/api/prayer-requests', authenticateToken, async (req, res) => {
+app.post('/api/prayer-requests', authenticateToken, async function(req, res) {
     try {
-        const { member_name, title, description, status, assigned_to } = req.body;
-        const result = await pool.query(
-            `INSERT INTO prayer_requests (member_name, title, description, status, assigned_to) 
-             VALUES ($1, $2, $3, $4, $5) 
-             RETURNING *`,
+        var { member_name, title, description, status, assigned_to } = req.body;
+        var result = await pool.query(
+            'INSERT INTO prayer_requests (member_name, title, description, status, assigned_to) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [member_name, title, description, status || 'active', assigned_to]
         );
-        const prayer = result.rows[0];
+        var prayer = result.rows[0];
         broadcastEvent('prayer_created', prayer);
         res.status(201).json(prayer);
     } catch (error) {
@@ -600,25 +653,27 @@ app.post('/api/prayer-requests', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/budgets', authenticateToken, async (req, res) => {
+// ============================================
+// BUDGET ROUTES
+// ============================================
+
+app.get('/api/budgets', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM budgets ORDER BY period DESC');
+        var result = await pool.query('SELECT * FROM budgets ORDER BY period DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get budgets' });
     }
 });
 
-app.post('/api/budgets', authenticateToken, async (req, res) => {
+app.post('/api/budgets', authenticateToken, async function(req, res) {
     try {
-        const { category, allocated, spent, period, notes } = req.body;
-        const result = await pool.query(
-            `INSERT INTO budgets (category, allocated, spent, period, notes) 
-             VALUES ($1, $2, $3, $4, $5) 
-             RETURNING *`,
+        var { category, allocated, spent, period, notes } = req.body;
+        var result = await pool.query(
+            'INSERT INTO budgets (category, allocated, spent, period, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [category, allocated, spent || 0, period, notes]
         );
-        const budget = result.rows[0];
+        var budget = result.rows[0];
         broadcastEvent('budget_created', budget);
         res.status(201).json(budget);
     } catch (error) {
@@ -626,25 +681,27 @@ app.post('/api/budgets', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/pledges', authenticateToken, async (req, res) => {
+// ============================================
+// PLEDGES ROUTES
+// ============================================
+
+app.get('/api/pledges', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM pledges ORDER BY created_at DESC');
+        var result = await pool.query('SELECT * FROM pledges ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get pledges' });
     }
 });
 
-app.post('/api/pledges', authenticateToken, async (req, res) => {
+app.post('/api/pledges', authenticateToken, async function(req, res) {
     try {
-        const { member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes } = req.body;
-        const result = await pool.query(
-            `INSERT INTO pledges (member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-             RETURNING *`,
+        var { member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes } = req.body;
+        var result = await pool.query(
+            'INSERT INTO pledges (member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
             [member_id, member_name, amount, category, start_date, end_date, paid || 0, balance || amount, status || 'active', notes]
         );
-        const pledge = result.rows[0];
+        var pledge = result.rows[0];
         broadcastEvent('pledge_created', pledge);
         res.status(201).json(pledge);
     } catch (error) {
@@ -652,25 +709,27 @@ app.post('/api/pledges', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/notifications', authenticateToken, async (req, res) => {
+// ============================================
+// NOTIFICATIONS ROUTES
+// ============================================
+
+app.get('/api/notifications', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+        var result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get notifications' });
     }
 });
 
-app.post('/api/notifications', authenticateToken, async (req, res) => {
+app.post('/api/notifications', authenticateToken, async function(req, res) {
     try {
-        const { type, subject, message, recipient, status, sent_at, channel } = req.body;
-        const result = await pool.query(
-            `INSERT INTO notifications (type, subject, message, recipient, status, sent_at, channel) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) 
-             RETURNING *`,
+        var { type, subject, message, recipient, status, sent_at, channel } = req.body;
+        var result = await pool.query(
+            'INSERT INTO notifications (type, subject, message, recipient, status, sent_at, channel) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [type, subject, message, recipient, status || 'pending', sent_at || new Date().toISOString(), channel || 'email']
         );
-        const notification = result.rows[0];
+        var notification = result.rows[0];
         broadcastEvent('notification_created', notification);
         res.status(201).json(notification);
     } catch (error) {
@@ -678,25 +737,27 @@ app.post('/api/notifications', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/media', authenticateToken, async (req, res) => {
+// ============================================
+// MEDIA ROUTES
+// ============================================
+
+app.get('/api/media', authenticateToken, async function(req, res) {
     try {
-        const result = await pool.query('SELECT id, name, type, mime_type, size, uploaded_at, created_at FROM media ORDER BY created_at DESC');
+        var result = await pool.query('SELECT id, name, type, mime_type, size, uploaded_at, created_at FROM media ORDER BY created_at DESC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to get media' });
     }
 });
 
-app.post('/api/media', authenticateToken, async (req, res) => {
+app.post('/api/media', authenticateToken, async function(req, res) {
     try {
-        const { name, type, mime_type, size, data, uploaded_at } = req.body;
-        const result = await pool.query(
-            `INSERT INTO media (name, type, mime_type, size, data, uploaded_at) 
-             VALUES ($1, $2, $3, $4, $5, $6) 
-             RETURNING id, name, type, mime_type, size, uploaded_at, created_at`,
+        var { name, type, mime_type, size, data, uploaded_at } = req.body;
+        var result = await pool.query(
+            'INSERT INTO media (name, type, mime_type, size, data, uploaded_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, type, mime_type, size, uploaded_at, created_at',
             [name, type, mime_type, size, data, uploaded_at || new Date().toISOString()]
         );
-        const media = result.rows[0];
+        var media = result.rows[0];
         broadcastEvent('media_created', media);
         res.status(201).json(media);
     } catch (error) {
@@ -704,26 +765,59 @@ app.post('/api/media', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/api/media/:id', authenticateToken, async (req, res) => {
+app.delete('/api/media/:id', authenticateToken, async function(req, res) {
     try {
-        const id = parseInt(req.params.id);
+        var id = parseInt(req.params.id);
         await pool.query('DELETE FROM media WHERE id = $1', [id]);
-        broadcastEvent('media_deleted', { id });
+        broadcastEvent('media_deleted', { id: id });
         res.json({ message: 'Media deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete media' });
     }
 });
 
+// ============================================
+// SYNC ROUTE
+// ============================================
+
+app.post('/api/sync', authenticateToken, async function(req, res) {
+    try {
+        var { data } = req.body;
+        var results = {};
+
+        if (data.members && data.members.length > 0) {
+            results.members = [];
+            for (var i = 0; i < data.members.length; i++) {
+                var member = data.members[i];
+                var result = await pool.query(
+                    'INSERT INTO members (first_name, last_name, email, phone, address, join_date, status, membership_type, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, email = EXCLUDED.email, phone = EXCLUDED.phone, address = EXCLUDED.address, status = EXCLUDED.status, membership_type = EXCLUDED.membership_type, notes = EXCLUDED.notes, updated_at = CURRENT_TIMESTAMP RETURNING *',
+                    [member.first_name, member.last_name, member.email, member.phone, member.address, member.join_date, member.status, member.membership_type, member.notes]
+                );
+                results.members.push(result.rows[0]);
+            }
+        }
+
+        broadcastEvent('sync_completed', { userId: req.user.id });
+
+        res.json({ success: true, results: results });
+    } catch (error) {
+        console.error('Sync error:', error);
+        res.status(500).json({ error: 'Sync failed: ' + error.message });
+    }
+});
+
+// ============================================
+// SEED ADMIN USER
+// ============================================
+
 async function seedAdmin() {
     try {
-        const check = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@church.com']);
+        var check = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@church.com']);
         if (check.rows.length === 0) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('password123', salt);
+            var salt = await bcrypt.genSalt(10);
+            var hashedPassword = await bcrypt.hash('password123', salt);
             await pool.query(
-                `INSERT INTO users (name, email, password, role) 
-                 VALUES ($1, $2, $3, $4)`,
+                'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)',
                 ['Admin User', 'admin@church.com', hashedPassword, 'admin']
             );
             console.log('Admin user created: admin@church.com / password123');
@@ -735,11 +829,15 @@ async function seedAdmin() {
     }
 }
 
+// ============================================
+// START SERVER
+// ============================================
+
 async function startServer() {
     await initDatabase();
     await seedAdmin();
 
-    server.listen(PORT, () => {
+    server.listen(PORT, function() {
         console.log('');
         console.log('Victory Life CMS - Backend Server');
         console.log('Server running on http://localhost:' + PORT);
