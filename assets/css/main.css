@@ -546,3 +546,22 @@ table tbody tr:hover { background: var(--surface2); }
     letter-spacing: 0.3px;
     margin-left: auto;
 }
+.install-btn {
+    background: var(--primary) !important;
+    color: white !important;
+    border-radius: 20px !important;
+    padding: 4px 14px !important;
+    width: auto !important;
+    height: auto !important;
+    gap: 6px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.install-btn:hover {
+    background: var(--primary-hover) !important;
+    transform: scale(1.05);
+}

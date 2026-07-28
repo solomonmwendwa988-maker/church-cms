@@ -12,6 +12,74 @@ const App = {
 // THEME MANAGEMENT
 // ============================================
 
+// ============================================
+// INSTALL APP BUTTON
+// ============================================
+
+let deferredPrompt;
+let isAppInstalled = false;
+
+// Show install button immediately
+document.addEventListener('DOMContentLoaded', function() {
+    const installBtn = document.getElementById('installBtn');
+    if (installBtn) {
+        installBtn.style.display = 'flex';
+    }
+});
+
+// Listen for beforeinstallprompt
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installBtn = document.getElementById('installBtn');
+    if (installBtn) {
+        installBtn.style.display = 'flex';
+    }
+});
+
+// Listen for app installed
+window.addEventListener('appinstalled', function() {
+    isAppInstalled = true;
+    const installBtn = document.getElementById('installBtn');
+    if (installBtn) {
+        installBtn.style.display = 'none';
+    }
+    showToast('App installed successfully!', 'success');
+});
+
+// Install function
+function installApp() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted install');
+            } else {
+                console.log('User dismissed install');
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        showToast('Open this page in Chrome and tap "Add to Home Screen"', 'info');
+    }
+}
+
+// Check if already installed
+function checkIfInstalled() {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        isAppInstalled = true;
+        const installBtn = document.getElementById('installBtn');
+        if (installBtn) {
+            installBtn.style.display = 'none';
+        }
+    }
+}
+
+// Run check
+document.addEventListener('DOMContentLoaded', function() {
+    checkIfInstalled();
+});
+
 function toggleTheme() {
     App.darkMode = !App.darkMode;
     document.documentElement.setAttribute('data-theme', App.darkMode ? 'dark' : 'light');
