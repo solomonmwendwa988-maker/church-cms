@@ -30,6 +30,8 @@
             font-size: 0.7rem;
         }
         .promote-btn:hover { opacity: 0.8; }
+        .admin-only { display: none; }
+        .admin-visible { display: none; }
     </style>
 </head>
 <body>
@@ -42,7 +44,7 @@
             </a>
         </div>
         <div class="header-right">
-            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+            <button id="installBtn" class="header-btn install-btn" onclick="installApp()" title="Install App">
                 <i class="fas fa-download"></i>
                 <span class="install-label">Install</span>
             </button>
@@ -124,6 +126,7 @@
                     <span class="user-name" id="userName">Admin User</span>
                     <span class="user-role" id="userRole">Administrator</span>
                 </div>
+                <span id="userRoleBadge" style="font-size:0.6rem;padding:2px 8px;border-radius:12px;border:1px solid var(--primary);color:var(--primary);">Admin</span>
             </div>
         </div>
     </aside>
@@ -135,17 +138,23 @@
             </button>
             <div>
                 <span class="page-title">User Management</span>
-                <span class="page-subtitle">Manage users and promote roles</span>
+                <span class="page-subtitle">Only Administrators can manage users</span>
             </div>
         </div>
 
-        <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+        <!-- Admin Only - Add User Button -->
+        <div data-admin-only style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
             <button class="btn-primary" onclick="openAddUserModal()">
                 <i class="fas fa-plus"></i> Add User
             </button>
             <button class="btn-secondary" onclick="refreshUsers()">
                 <i class="fas fa-sync"></i> Refresh
             </button>
+        </div>
+
+        <!-- Non-Admin Message -->
+        <div data-non-admin style="margin-bottom:20px;padding:12px 16px;background:rgba(245,158,11,0.1);border-radius:8px;border-left:3px solid var(--warning);color:var(--text-secondary);">
+            <i class="fas fa-lock"></i> You are viewing users. Only Administrators can add, promote, or delete users.
         </div>
 
         <div class="card">
@@ -241,6 +250,7 @@
     <script src="../../assets/js/data.js"></script>
     <script src="../../assets/js/utils.js"></script>
     <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/permissions.js"></script>
     <script src="../../assets/js/sync.js"></script>
     <script src="../../assets/js/app.js"></script>
     <script>
@@ -250,6 +260,16 @@
         function renderUsers() {
             const users = DB.getAll('users');
             const table = document.getElementById('usersTable');
+            const currentUser = getCurrentUser();
+            const isAdminUser = isAdmin();
+
+            // Show/hide admin controls
+            document.querySelectorAll('[data-admin-only]').forEach(el => {
+                el.style.display = isAdminUser ? '' : 'none';
+            });
+            document.querySelectorAll('[data-non-admin]').forEach(el => {
+                el.style.display = isAdminUser ? 'none' : '';
+            });
 
             document.getElementById('userTotal').textContent = users.length;
             document.getElementById('userBadge').textContent = users.length;
@@ -268,10 +288,11 @@
                 member: 'role-member'
             };
 
-            const currentUser = getCurrentUser();
-
             table.innerHTML = users.map(function(u) {
                 const isCurrentUser = currentUser && u.id === currentUser.id;
+                const canDelete = isAdminUser && !isCurrentUser;
+                const canPromote = isAdminUser && !isCurrentUser && u.role !== 'admin';
+
                 return `
                     <tr>
                         <td><strong>${u.name} ${isCurrentUser ? '👑' : ''}</strong></td>
@@ -279,8 +300,9 @@
                         <td><span class="role-badge ${roleClasses[u.role] || 'role-member'}">${u.role || 'member'}</span></td>
                         <td><span class="item-status ${u.status === 'active' ? 'active' : 'pending'}">${u.status}</span></td>
                         <td>
-                            ${u.role !== 'admin' ? `<button class="promote-btn" onclick="openPromoteModal('${u.id}', '${u.name}')">Promote</button>` : ''}
-                            ${!isCurrentUser ? `<button class="btn-sm" onclick="deleteUser('${u.id}')" style="color:var(--danger);">Delete</button>` : ''}
+                            ${canPromote ? `<button class="promote-btn" onclick="openPromoteModal('${u.id}', '${u.name}')">Promote</button>` : ''}
+                            ${canDelete ? `<button class="btn-sm" onclick="deleteUser('${u.id}')" style="color:var(--danger);">Delete</button>` : ''}
+                            ${isCurrentUser ? '<span style="font-size:0.7rem;color:var(--text-muted);">You</span>' : ''}
                         </td>
                     </tr>
                 `;
@@ -288,14 +310,23 @@
         }
 
         // ============================================
-        // ADD USER
+        // ADD USER (Admin only)
         // ============================================
         function openAddUserModal() {
+            if (!isAdmin()) {
+                showToast('Only administrators can add users', 'error');
+                return;
+            }
             document.getElementById('addUserModal').classList.add('active');
         }
 
         document.getElementById('addUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            if (!isAdmin()) {
+                showToast('Only administrators can add users', 'error');
+                return;
+            }
 
             const name = document.getElementById('userName').value.trim();
             const email = document.getElementById('userEmail').value.trim();
@@ -331,9 +362,13 @@
         });
 
         // ============================================
-        // PROMOTE USER
+        // PROMOTE USER (Admin only)
         // ============================================
         function openPromoteModal(userId, userName) {
+            if (!isAdmin()) {
+                showToast('Only administrators can promote users', 'error');
+                return;
+            }
             document.getElementById('promoteUserId').value = userId;
             document.getElementById('promoteUserName').textContent = userName;
             document.getElementById('promoteModal').classList.add('active');
@@ -342,14 +377,19 @@
         document.getElementById('promoteForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
+            if (!isAdmin()) {
+                showToast('Only administrators can promote users', 'error');
+                return;
+            }
+
             const userId = document.getElementById('promoteUserId').value;
             const newRole = document.getElementById('promoteUserRole').value;
 
             try {
-                // Update user role in local DB
+                // Update in local DB
                 DB.update('users', userId, { role: newRole });
-                
-                // Also update on server via API
+
+                // Update on server
                 const token = localStorage.getItem('token');
                 await fetch(`https://church-cms-api-11h5.onrender.com/api/users/${userId}`, {
                     method: 'PUT',
@@ -370,10 +410,15 @@
         });
 
         // ============================================
-        // DELETE USER
+        // DELETE USER (Admin only)
         // ============================================
         function deleteUser(id) {
-            if (confirm('Delete this user?')) {
+            if (!isAdmin()) {
+                showToast('Only administrators can delete users', 'error');
+                return;
+            }
+
+            if (confirm('Delete this user? This action cannot be undone.')) {
                 DB.delete('users', id);
                 refreshUsers();
                 showToast('User deleted', 'info');
@@ -430,6 +475,7 @@
                 return;
             }
             updateSidebarUser();
+            applyPermissions();
             renderUsers();
             updateBadges();
             if (typeof Sync !== 'undefined' && Sync.init) {

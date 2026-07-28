@@ -2,21 +2,21 @@
 // SYNC MANAGEMENT - Real-time Multi-User
 // ============================================
 
-const Sync = {
+var Sync = {
     apiUrl: 'https://church-cms-api-11h5.onrender.com/api',
     socket: null,
     isConnected: false,
     onlineUsers: [],
     syncInterval: null,
 
-    init() {
-        console.log('🔄 Sync initialized');
+    init: function() {
+        console.log('Sync initialized');
         this.connectSocket();
         this.loadDataFromServer();
         this.startAutoSync();
     },
 
-    connectSocket() {
+    connectSocket: function() {
         if (this.socket) return;
 
         this.socket = io('https://church-cms-api-11h5.onrender.com', {
@@ -26,11 +26,11 @@ const Sync = {
             reconnectionDelay: 1000
         });
 
-        this.socket.on('connect', () => {
-            console.log('🔗 WebSocket connected');
+        this.socket.on('connect', function() {
+            console.log('WebSocket connected');
             this.isConnected = true;
-            
-            const user = getCurrentUser();
+
+            var user = getCurrentUser();
             if (user) {
                 this.socket.emit('user_online', {
                     userId: user.id,
@@ -38,211 +38,226 @@ const Sync = {
                     role: user.role
                 });
                 this.socket.emit('join', user.id);
-                if (user.role === 'admin') {
-                    this.socket.emit('join_admin');
-                }
             }
-            
-            showToast('🟢 Connected to server', 'success');
-        });
 
-        this.socket.on('disconnect', () => {
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus('synced');
+            }
+            showToast('Connected to server', 'success');
+        }.bind(this));
+
+        this.socket.on('disconnect', function() {
             this.isConnected = false;
-            showToast('🔴 Disconnected from server', 'warning');
-        });
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus('error');
+            }
+            showToast('Disconnected from server', 'warning');
+        }.bind(this));
 
-        // Online users
-        this.socket.on('users_online', (users) => {
+        this.socket.on('users_online', function(users) {
             this.onlineUsers = users;
-            this.updateOnlineUsers();
-        });
+            if (typeof updateOnlineUsers === 'function') {
+                updateOnlineUsers(users);
+            }
+        }.bind(this));
 
-        // Real-time CRUD events
-        this.socket.on('member_created', (data) => {
+        this.socket.on('member_created', function(data) {
             this.handleRealtimeUpdate('member_created', data);
-        });
-        this.socket.on('member_updated', (data) => {
+        }.bind(this));
+
+        this.socket.on('member_updated', function(data) {
             this.handleRealtimeUpdate('member_updated', data);
-        });
-        this.socket.on('member_deleted', (data) => {
+        }.bind(this));
+
+        this.socket.on('member_deleted', function(data) {
             this.handleRealtimeUpdate('member_deleted', data);
-        });
+        }.bind(this));
 
-        this.socket.on('event_created', (data) => {
+        this.socket.on('event_created', function(data) {
             this.handleRealtimeUpdate('event_created', data);
-        });
-        this.socket.on('event_updated', (data) => {
+        }.bind(this));
+
+        this.socket.on('event_updated', function(data) {
             this.handleRealtimeUpdate('event_updated', data);
-        });
-        this.socket.on('event_deleted', (data) => {
+        }.bind(this));
+
+        this.socket.on('event_deleted', function(data) {
             this.handleRealtimeUpdate('event_deleted', data);
-        });
+        }.bind(this));
 
-        this.socket.on('giving_created', (data) => {
+        this.socket.on('giving_created', function(data) {
             this.handleRealtimeUpdate('giving_created', data);
-        });
+        }.bind(this));
 
-        this.socket.on('mpesa_transaction', (data) => {
+        this.socket.on('mpesa_transaction', function(data) {
             this.handleRealtimeUpdate('mpesa_transaction', data);
-        });
+        }.bind(this));
 
-        this.socket.on('sermon_created', (data) => {
+        this.socket.on('sermon_created', function(data) {
             this.handleRealtimeUpdate('sermon_created', data);
-        });
+        }.bind(this));
 
-        this.socket.on('sync_completed', (data) => {
-            showToast('🔄 Data synced with server', 'success');
-        });
+        this.socket.on('user_updated', function(data) {
+            this.handleRealtimeUpdate('user_updated', data);
+        }.bind(this));
+
+        this.socket.on('user_deleted', function(data) {
+            this.handleRealtimeUpdate('user_deleted', data);
+        }.bind(this));
+
+        this.socket.on('sync_completed', function() {
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus('synced');
+            }
+            showToast('Data synced with server', 'success');
+        }.bind(this));
     },
 
-    handleRealtimeUpdate(event, data) {
-        console.log('📢 Real-time:', event, data);
-        
-        // Show notification
-        const messages = {
-            member_created: `👤 New member added: ${data.first_name} ${data.last_name}`,
-            member_updated: `👤 Member updated: ${data.first_name} ${data.last_name}`,
-            member_deleted: '👤 Member deleted',
-            event_created: `📅 New event: ${data.title}`,
-            event_updated: `📅 Event updated: ${data.title}`,
-            event_deleted: '📅 Event deleted',
-            giving_created: `💰 Giving recorded: ${data.member_name}`,
-            mpesa_transaction: `📱 M-Pesa payment: ${formatCurrency(data.amount)}`,
-            sermon_created: `📖 New sermon: ${data.title}`
+    handleRealtimeUpdate: function(event, data) {
+        console.log('Real-time event:', event, data);
+
+        var messages = {
+            'member_created': 'New member added: ' + (data.first_name || '') + ' ' + (data.last_name || ''),
+            'member_updated': 'Member updated: ' + (data.first_name || '') + ' ' + (data.last_name || ''),
+            'member_deleted': 'Member deleted',
+            'event_created': 'New event: ' + (data.title || ''),
+            'event_updated': 'Event updated: ' + (data.title || ''),
+            'event_deleted': 'Event deleted',
+            'giving_created': 'Giving recorded: ' + (data.member_name || ''),
+            'mpesa_transaction': 'M-Pesa payment: ' + formatCurrency(data.amount || 0),
+            'sermon_created': 'New sermon: ' + (data.title || ''),
+            'user_updated': 'User updated: ' + (data.name || ''),
+            'user_deleted': 'User deleted'
         };
-        
+
         if (messages[event]) {
             showToast(messages[event], 'info');
         }
 
-        // Update local data
-        const collections = {
-            member_created: 'members',
-            member_updated: 'members',
-            member_deleted: 'members',
-            event_created: 'events',
-            event_updated: 'events',
-            event_deleted: 'events',
-            giving_created: 'giving',
-            mpesa_transaction: 'mpesaTransactions',
-            sermon_created: 'sermons'
+        var collections = {
+            'member_created': 'members',
+            'member_updated': 'members',
+            'member_deleted': 'members',
+            'event_created': 'events',
+            'event_updated': 'events',
+            'event_deleted': 'events',
+            'giving_created': 'giving',
+            'mpesa_transaction': 'mpesaTransactions',
+            'sermon_created': 'sermons',
+            'user_updated': 'users',
+            'user_deleted': 'users'
         };
 
-        const collection = collections[event];
+        var collection = collections[event];
         if (collection) {
-            if (event.endsWith('_deleted')) {
+            if (event.indexOf('deleted') !== -1) {
                 DB.delete(collection, data.id);
-            } else if (event.endsWith('_updated')) {
+            } else if (event.indexOf('updated') !== -1) {
                 DB.update(collection, data.id, data);
             } else {
                 DB.add(collection, data);
             }
         }
 
-        // Refresh UI
         if (typeof updateBadges === 'function') updateBadges();
         if (typeof renderAll === 'function') renderAll();
-        if (typeof renderDashboard === 'function') renderDashboard();
-        if (typeof renderMembers === 'function') renderMembers();
-        if (typeof renderEvents === 'function') renderEvents();
-        if (typeof renderFinance === 'function') renderFinance();
     },
 
-    updateOnlineUsers() {
-        const container = document.getElementById('onlineUsers');
-        if (!container) return;
+    loadDataFromServer: function() {
+        var token = localStorage.getItem('token');
+        if (!token) return;
 
-        const count = this.onlineUsers.length;
-        const names = this.onlineUsers.map(u => u.name).join(', ');
+        var collections = ['members', 'events', 'giving', 'sermons', 'mpesa', 'users', 'notifications', 'pledges', 'budgets', 'prayer-requests'];
 
-        container.innerHTML = `
-            <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
-                <span style="color:var(--success);">●</span>
-                <span>${count} online</span>
-                ${names ? `<span style="color:var(--text-secondary);font-size:0.75rem;">(${names})</span>` : ''}
-            </div>
-        `;
-    },
-
-    async loadDataFromServer() {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
-            const collections = ['members', 'events', 'giving', 'sermons', 'mpesa', 'users', 'notifications', 'pledges', 'budgets', 'prayer-requests'];
-
-            for (const col of collections) {
-                try {
-                    const response = await fetch(`${this.apiUrl}/${col}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
+        for (var i = 0; i < collections.length; i++) {
+            (function(col) {
+                fetch(Sync.apiUrl + '/' + col, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                .then(function(response) {
                     if (response.ok) {
-                        const data = await response.json();
-                        if (data && data.length > 0) {
-                            const collectionName = col === 'mpesa' ? 'mpesaTransactions' : col.replace('-', '');
-                            DB.saveAll(collectionName, data);
-                            console.log(`✅ Loaded ${data.length} ${col} from server`);
-                        }
+                        return response.json();
                     }
-                } catch (e) {
-                    console.log(`⚠️ Could not load ${col}:`, e.message);
-                }
-            }
+                    return null;
+                })
+                .then(function(data) {
+                    if (data && data.length > 0) {
+                        var collectionName = col === 'mpesa' ? 'mpesaTransactions' : col.replace('-', '');
+                        DB.saveAll(collectionName, data);
+                        console.log('Loaded ' + data.length + ' ' + col + ' from server');
+                    }
+                })
+                .catch(function(err) {
+                    console.log('Could not load ' + col + ':', err.message);
+                });
+            })(collections[i]);
+        }
 
+        setTimeout(function() {
             if (typeof updateBadges === 'function') updateBadges();
             if (typeof renderAll === 'function') renderAll();
-
-        } catch (error) {
-            console.log('⚠️ Sync error:', error.message);
-        }
+            if (typeof updateSyncStatus === 'function') updateSyncStatus('synced');
+        }, 2000);
     },
 
-    async syncData() {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+    syncData: function() {
+        var token = localStorage.getItem('token');
+        if (!token) return;
 
-            const data = {
-                members: DB.getAll('members'),
-                events: DB.getAll('events'),
-                giving: DB.getAll('giving'),
-                mpesaTransactions: DB.getAll('mpesaTransactions'),
-                sermons: DB.getAll('sermons')
-            };
+        var data = {
+            members: DB.getAll('members'),
+            events: DB.getAll('events'),
+            giving: DB.getAll('giving'),
+            mpesaTransactions: DB.getAll('mpesaTransactions'),
+            sermons: DB.getAll('sermons')
+        };
 
-            const response = await fetch(`${this.apiUrl}/sync`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ data })
-            });
-
+        fetch(this.apiUrl + '/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ data: data })
+        })
+        .then(function(response) {
             if (response.ok) {
-                console.log('✅ Data synced to server');
+                console.log('Data synced to server');
             }
-        } catch (error) {
-            console.log('⚠️ Sync error:', error.message);
-        }
+        })
+        .catch(function(error) {
+            console.log('Sync error:', error.message);
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus('error');
+            }
+        });
     },
 
-    startAutoSync() {
+    startAutoSync: function() {
         if (this.syncInterval) clearInterval(this.syncInterval);
-        this.syncInterval = setInterval(() => {
-            this.syncData();
-        }, 30000);
+        this.syncInterval = setInterval(function() {
+            if (this.isConnected) {
+                this.syncData();
+            }
+        }.bind(this), 30000);
     },
 
-    async manualSync() {
-        showToast('🔄 Syncing...', 'info');
-        await this.syncData();
-        await this.loadDataFromServer();
-        showToast('✅ Sync completed', 'success');
+    manualSync: function() {
+        if (typeof updateSyncStatus === 'function') {
+            updateSyncStatus('syncing');
+        }
+        showToast('Syncing...', 'info');
+        this.syncData();
+        this.loadDataFromServer();
+        setTimeout(function() {
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus('synced');
+            }
+            showToast('Sync completed', 'success');
+        }, 3000);
     },
 
-    disconnect() {
+    disconnect: function() {
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;

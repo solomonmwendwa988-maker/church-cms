@@ -26,6 +26,28 @@
                 <span class="install-label">Install</span>
             </button>
 
+           <!-- In the topbar section, after the page subtitle -->
+<div class="topbar">
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div>
+        <span class="page-title" id="pageTitle">Dashboard</span>
+        <span class="page-subtitle" id="pageSubtitle">Welcome back, Admin</span>
+    </div>
+
+    <!-- SYNC STATUS -->
+    <div id="syncStatus" style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg);border-radius:20px;font-size:0.75rem;">
+        <span id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+        <span id="syncText">Synced</span>
+    </div>
+
+    <!-- ONLINE USERS -->
+    <div id="onlineUsers" style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:var(--bg);border-radius:20px;font-size:0.85rem;">
+        <span style="color:#22c55e;">●</span>
+        <span>0 online</span>
+    </div>
+</div>
             <button class="header-btn" onclick="showNotification()" title="Notifications">
                 <i class="fas fa-bell"></i>
                 <span class="dot active" id="notifDot"></span>

@@ -2,15 +2,10 @@
 // APP CONFIGURATION
 // ============================================
 
-const App = {
+var App = {
     currentPage: 'dashboard',
     darkMode: localStorage.getItem('theme') === 'dark',
-    sidebarOpen: false,
-    user: {
-        name: 'Admin User',
-        role: 'Administrator',
-        avatar: 'AD'
-    }
+    sidebarOpen: false
 };
 
 // ============================================
@@ -22,12 +17,12 @@ function toggleTheme() {
     document.documentElement.setAttribute('data-theme', App.darkMode ? 'dark' : 'light');
     localStorage.setItem('theme', App.darkMode ? 'dark' : 'light');
 
-    const icon = document.querySelector('#themeBtn i');
+    var icon = document.querySelector('#themeBtn i');
     if (icon) {
         icon.className = App.darkMode ? 'fas fa-sun' : 'fas fa-moon';
     }
 
-    const darkSwitch = document.getElementById('darkModeSwitch');
+    var darkSwitch = document.getElementById('darkModeSwitch');
     if (darkSwitch) {
         darkSwitch.checked = App.darkMode;
     }
@@ -35,11 +30,10 @@ function toggleTheme() {
     showToast(App.darkMode ? 'Dark mode activated' : 'Light mode activated', 'success');
 }
 
-// Load saved theme
 (function loadTheme() {
     if (App.darkMode) {
         document.documentElement.setAttribute('data-theme', 'dark');
-        const icon = document.querySelector('#themeBtn i');
+        var icon = document.querySelector('#themeBtn i');
         if (icon) icon.className = 'fas fa-sun';
     }
 })();
@@ -49,7 +43,7 @@ function toggleTheme() {
 // ============================================
 
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
+    var sidebar = document.getElementById('sidebar');
     App.sidebarOpen = !App.sidebarOpen;
     sidebar.classList.toggle('open');
     sidebar.classList.toggle('closed');
@@ -62,8 +56,8 @@ function toggleSidebar() {
 }
 
 function closeSidebarOutside(e) {
-    const sidebar = document.getElementById('sidebar');
-    const toggle = document.querySelector('.menu-toggle');
+    var sidebar = document.getElementById('sidebar');
+    var toggle = document.querySelector('.menu-toggle');
     if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
         sidebar.classList.remove('open');
         sidebar.classList.add('closed');
@@ -72,10 +66,9 @@ function closeSidebarOutside(e) {
     }
 }
 
-// Close sidebar on resize to desktop
 window.addEventListener('resize', function() {
     if (window.innerWidth > 768) {
-        const sidebar = document.getElementById('sidebar');
+        var sidebar = document.getElementById('sidebar');
         sidebar.classList.remove('open');
         sidebar.classList.add('closed');
         App.sidebarOpen = false;
@@ -87,9 +80,8 @@ window.addEventListener('resize', function() {
 // ============================================
 
 function navigateTo(page) {
-    // Handle pages that need full page reload
-    if (page === 'settings' || page === 'users' || page === 'media' || page === 'reports' || 
-        page === 'sermons' || page === 'analytics' || page === 'mpesa' || page === 'notifications') {
+    var reloadPages = ['settings', 'users', 'media', 'reports', 'sermons', 'analytics', 'mpesa', 'notifications'];
+    if (reloadPages.indexOf(page) !== -1) {
         window.location.href = '../' + page + '/index.html';
         return;
     }
@@ -103,7 +95,7 @@ function navigateTo(page) {
         }
     });
 
-    const titles = {
+    var titles = {
         dashboard: 'Dashboard',
         members: 'Members',
         attendance: 'Attendance',
@@ -114,11 +106,11 @@ function navigateTo(page) {
         settings: 'Settings'
     };
 
-    const titleEl = document.getElementById('pageTitle');
+    var titleEl = document.getElementById('pageTitle');
     if (titleEl) titleEl.textContent = titles[page] || 'Dashboard';
 
     if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
+        var sidebar = document.getElementById('sidebar');
         sidebar.classList.remove('open');
         sidebar.classList.add('closed');
         App.sidebarOpen = false;
@@ -128,7 +120,7 @@ function navigateTo(page) {
 }
 
 function loadPageContent(page) {
-    const container = document.getElementById('pageContent');
+    var container = document.getElementById('pageContent');
     if (!container) return;
 
     switch (page) {
@@ -159,29 +151,82 @@ function loadPageContent(page) {
 }
 
 // ============================================
+// SYNC STATUS
+// ============================================
+
+function updateSyncStatus(status) {
+    var dot = document.getElementById('syncDot');
+    var text = document.getElementById('syncText');
+    if (!dot || !text) return;
+
+    if (status === 'syncing') {
+        dot.style.background = '#f59e0b';
+        text.textContent = 'Syncing...';
+        document.getElementById('syncBtn').style.opacity = '0.5';
+        document.getElementById('syncBtn').disabled = true;
+    } else if (status === 'synced') {
+        dot.style.background = '#22c55e';
+        text.textContent = 'Synced';
+        document.getElementById('syncBtn').style.opacity = '1';
+        document.getElementById('syncBtn').disabled = false;
+    } else if (status === 'error') {
+        dot.style.background = '#ef4444';
+        text.textContent = 'Sync Error';
+        document.getElementById('syncBtn').style.opacity = '1';
+        document.getElementById('syncBtn').disabled = false;
+    }
+}
+
+function manualSync() {
+    updateSyncStatus('syncing');
+    if (typeof Sync !== 'undefined' && Sync.manualSync) {
+        Sync.manualSync();
+        setTimeout(function() {
+            updateSyncStatus('synced');
+        }, 3000);
+    } else {
+        showToast('Sync module not available', 'error');
+        updateSyncStatus('error');
+    }
+}
+
+// ============================================
+// ONLINE USERS
+// ============================================
+
+function updateOnlineUsers(users) {
+    var container = document.getElementById('onlineUsers');
+    if (!container) return;
+
+    var count = users ? users.length : 0;
+    var names = users ? users.map(function(u) { return u.name; }).join(', ') : '';
+
+    container.innerHTML = '<span style="color:#22c55e;">●</span> <span>' + count + ' online</span>' + (names ? ' <span style="color:#94a3b8;font-size:0.75rem;">(' + names + ')</span>' : '');
+}
+
+// ============================================
 // DASHBOARD
 // ============================================
 
 function renderDashboard(container) {
-    const members = DB.getAll('members');
-    const events = DB.getAll('events');
-    const giving = DB.getAll('giving');
-    const attendance = DB.getAll('attendance');
-    const media = DB.getAll('media');
+    var members = DB.getAll('members');
+    var events = DB.getAll('events');
+    var giving = DB.getAll('giving');
+    var attendance = DB.getAll('attendance');
+    var media = DB.getAll('media');
 
-    const totalMembers = members.length;
-    const activeMembers = members.filter(function(m) { return m.status === 'Active'; }).length;
-    const totalGiving = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
-    const upcomingEvents = events.filter(function(e) { return e.status === 'Upcoming'; }).length;
-    const totalAttended = attendance.filter(function(a) { return a.status === 'Present'; }).length;
-    const totalMedia = media.length;
+    var totalMembers = members.length;
+    var activeMembers = members.filter(function(m) { return m.status === 'Active'; }).length;
+    var totalGiving = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
+    var upcomingEvents = events.filter(function(e) { return e.status === 'Upcoming'; }).length;
+    var totalAttended = attendance.filter(function(a) { return a.status === 'Present'; }).length;
+    var totalMedia = media.length;
 
     updateBadges();
 
-    const recentGiving = giving.slice(0, 3);
+    var recentGiving = giving.slice(0, 3);
 
     container.innerHTML = `
-        <!-- Stats Grid -->
         <section class="stats-grid">
             <div class="stat-card" onclick="navigateTo('members')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-users"></i></div></div>
@@ -189,28 +234,24 @@ function renderDashboard(container) {
                 <div class="stat-label">Total Members</div>
                 <span class="stat-change positive">${activeMembers} active</span>
             </div>
-
             <div class="stat-card" onclick="navigateTo('events')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-calendar-alt"></i></div></div>
                 <div class="stat-value">${upcomingEvents}</div>
                 <div class="stat-label">Upcoming Events</div>
                 <span class="stat-change">${events.length > 0 ? events[0].title : 'None'}</span>
             </div>
-
             <div class="stat-card" onclick="navigateTo('finance')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-coins"></i></div></div>
                 <div class="stat-value">${formatCurrency(totalGiving)}</div>
                 <div class="stat-label">Total Giving</div>
                 <span class="stat-change positive">${giving.length} transactions</span>
             </div>
-
             <div class="stat-card" onclick="navigateTo('attendance')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-clipboard-check"></i></div></div>
                 <div class="stat-value">${attendance.length}</div>
                 <div class="stat-label">Attendance Records</div>
                 <span class="stat-change positive">${totalAttended} present</span>
             </div>
-
             <div class="stat-card" onclick="navigateTo('media')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-photo-video"></i></div></div>
                 <div class="stat-value">${totalMedia}</div>
@@ -218,8 +259,6 @@ function renderDashboard(container) {
                 <span class="stat-change">${media.length > 0 ? 'Uploaded' : 'Empty'}</span>
             </div>
         </section>
-
-        <!-- Dashboard Grid -->
         <section class="dashboard-grid">
             <div class="card">
                 <div class="card-header">
@@ -228,11 +267,10 @@ function renderDashboard(container) {
                 </div>
                 <div class="item-list">
                     ${recentGiving.length > 0 ? recentGiving.map(function(g) {
-                        return `<div class="item"><div class="item-icon"><i class="fas fa-hand-holding-heart"></i></div><div class="item-content"><div class="item-title">${g.memberName} gave ${formatCurrency(g.amount)}</div><div class="item-meta">${formatDate(g.date)} · ${g.category}</div></div><span class="item-status active">${g.paymentMethod}</span></div>`;
+                        return '<div class="item"><div class="item-icon"><i class="fas fa-hand-holding-heart"></i></div><div class="item-content"><div class="item-title">' + g.memberName + ' gave ' + formatCurrency(g.amount) + '</div><div class="item-meta">' + formatDate(g.date) + ' · ' + g.category + '</div></div><span class="item-status active">' + g.paymentMethod + '</span></div>';
                     }).join('') : '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recent giving</div>'}
                 </div>
             </div>
-
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
@@ -243,6 +281,9 @@ function renderDashboard(container) {
                     <button class="btn-primary" onclick="window.location.href='../finance/add.html'" style="width:100%;justify-content:center;background:var(--warning);"><i class="fas fa-hand-holding-heart"></i> Record Giving</button>
                     <button class="btn-secondary" onclick="window.location.href='../attendance/checkin.html'" style="width:100%;justify-content:center;"><i class="fas fa-clipboard-check"></i> Mark Attendance</button>
                     <button class="btn-secondary" onclick="window.location.href='../users/index.html'" style="width:100%;justify-content:center;"><i class="fas fa-user-cog"></i> Manage Users</button>
+                    <button class="btn-secondary" onclick="manualSync()" style="width:100%;justify-content:center;background:var(--primary);color:white;">
+                        <i class="fas fa-sync"></i> Sync Data
+                    </button>
                 </div>
             </div>
         </section>
@@ -254,7 +295,7 @@ function renderDashboard(container) {
 // ============================================
 
 function renderMembersPage(container) {
-    const members = DB.getAll('members');
+    var members = DB.getAll('members');
 
     container.innerHTML = `
         <div class="card">
@@ -267,8 +308,8 @@ function renderMembersPage(container) {
                     <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Join Date</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                         ${members.length > 0 ? members.map(function(m) {
-                            return `<tr><td><strong>${m.firstName} ${m.lastName}</strong></td><td>${m.email || 'N/A'}</td><td>${m.phone || 'N/A'}</td><td>${formatDate(m.joinDate)}</td><td><span class="item-status ${m.status === 'Active' ? 'active' : 'pending'}">${m.status}</span></td><td><button class="btn-sm" onclick="window.location.href='../members/profile.html?id=${m.id}'">View</button><button class="btn-sm" onclick="window.location.href='../members/add.html?id=${m.id}'">Edit</button><button class="btn-sm" onclick="deleteMember('${m.id}')" style="color:var(--danger);">Delete</button></td></tr>`;
-                        }).join('') : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No members found</td></tr>`}
+                            return '<tr><td><strong>' + m.firstName + ' ' + m.lastName + '</strong></td><td>' + (m.email || 'N/A') + '</td><td>' + (m.phone || 'N/A') + '</td><td>' + formatDate(m.joinDate) + '</td><td><span class="item-status ' + (m.status === 'Active' ? 'active' : 'pending') + '">' + m.status + '</span></td><td><button class="btn-sm" onclick="window.location.href=\'../members/profile.html?id=' + m.id + '\'">View</button><button class="btn-sm" onclick="window.location.href=\'../members/add.html?id=' + m.id + '\'">Edit</button><button class="btn-sm" onclick="deleteMember(\'' + m.id + '\')" style="color:var(--danger);">Delete</button></td></tr>';
+                        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No members found</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -290,10 +331,10 @@ function deleteMember(id) {
 // ============================================
 
 function renderAttendancePage(container) {
-    const attendance = DB.getAll('attendance');
-    const totalPresent = attendance.filter(function(a) { return a.status === 'Present'; }).length;
-    const totalAbsent = attendance.filter(function(a) { return a.status === 'Absent'; }).length;
-    const totalLate = attendance.filter(function(a) { return a.status === 'Late'; }).length;
+    var attendance = DB.getAll('attendance');
+    var totalPresent = attendance.filter(function(a) { return a.status === 'Present'; }).length;
+    var totalAbsent = attendance.filter(function(a) { return a.status === 'Absent'; }).length;
+    var totalLate = attendance.filter(function(a) { return a.status === 'Late'; }).length;
 
     container.innerHTML = `
         <div class="stats-grid">
@@ -310,8 +351,8 @@ function renderAttendancePage(container) {
                     <thead><tr><th>Member</th><th>Service Type</th><th>Date</th><th>Status</th><th>Check In</th><th>Actions</th></tr></thead>
                     <tbody>
                         ${attendance.length > 0 ? attendance.slice().reverse().map(function(a) {
-                            return `<tr><td>${a.memberName || 'Unknown'}</td><td>${a.serviceType}</td><td>${formatDate(a.date)}</td><td><span class="item-status ${a.status === 'Present' ? 'active' : a.status === 'Late' ? 'pending' : 'completed'}">${a.status}</span></td><td>${a.checkInTime || 'N/A'}</td><td><button class="btn-sm" onclick="deleteAttendance('${a.id}')" style="color:var(--danger);">Delete</button></td></tr>`;
-                        }).join('') : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No attendance records found</td></tr>`}
+                            return '<tr><td>' + (a.memberName || 'Unknown') + '</td><td>' + a.serviceType + '</td><td>' + formatDate(a.date) + '</td><td><span class="item-status ' + (a.status === 'Present' ? 'active' : a.status === 'Late' ? 'pending' : 'completed') + '">' + a.status + '</span></td><td>' + (a.checkInTime || 'N/A') + '</td><td><button class="btn-sm" onclick="deleteAttendance(\'' + a.id + '\')" style="color:var(--danger);">Delete</button></td></tr>';
+                        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No attendance records found</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -333,8 +374,8 @@ function deleteAttendance(id) {
 // ============================================
 
 function renderFinancePage(container) {
-    const giving = DB.getAll('giving');
-    const totalGiving = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
+    var giving = DB.getAll('giving');
+    var totalGiving = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
 
     container.innerHTML = `
         <div class="stats-grid">
@@ -351,8 +392,8 @@ function renderFinancePage(container) {
                     <thead><tr><th>Member</th><th>Category</th><th>Amount</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead>
                     <tbody>
                         ${giving.length > 0 ? giving.slice().reverse().map(function(g) {
-                            return `<tr><td>${g.memberName || 'Anonymous'}</td><td>${g.category}</td><td><strong>${formatCurrency(g.amount)}</strong></td><td>${g.paymentMethod}</td><td>${formatDate(g.date)}</td><td><button class="btn-sm" onclick="editGiving('${g.id}')">Edit</button><button class="btn-sm" onclick="deleteGiving('${g.id}')" style="color:var(--danger);">Delete</button></td></tr>`;
-                        }).join('') : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No giving records found</td></tr>`}
+                            return '<tr><td>' + (g.memberName || 'Anonymous') + '</td><td>' + g.category + '</td><td><strong>' + formatCurrency(g.amount) + '</strong></td><td>' + g.paymentMethod + '</td><td>' + formatDate(g.date) + '</td><td><button class="btn-sm" onclick="editGiving(\'' + g.id + '\')">Edit</button><button class="btn-sm" onclick="deleteGiving(\'' + g.id + '\')" style="color:var(--danger);">Delete</button></td></tr>';
+                        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No giving records found</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -378,14 +419,14 @@ function editGiving(id) {
 // ============================================
 
 function renderEventsPage(container) {
-    const events = DB.getAll('events');
+    var events = DB.getAll('events');
 
     container.innerHTML = `
         <div style="margin-bottom:20px;"><button class="btn-primary" onclick="window.location.href='add.html'"><i class="fas fa-plus"></i> Create Event</button></div>
         <div class="dashboard-grid">
             ${events.length > 0 ? events.map(function(e) {
-                return `<div class="card"><h3 style="font-size:1.1rem;">${e.title}</h3><p style="color:var(--text-secondary);">${e.description || 'No description'}</p><div style="font-size:0.85rem;color:var(--text-secondary);"><div><i class="fas fa-calendar"></i> ${formatDate(e.startDate)}</div><div><i class="fas fa-map-marker-alt"></i> ${e.venue || 'N/A'}</div></div><div style="margin-top:12px;display:flex;gap:8px;"><button class="btn-sm" onclick="editEvent('${e.id}')">Edit</button><button class="btn-sm" onclick="deleteEvent('${e.id}')" style="color:var(--danger);">Delete</button></div></div>`;
-            }).join('') : `<div style="text-align:center;padding:60px;color:var(--text-muted);">No events found</div>`}
+                return '<div class="card"><h3 style="font-size:1.1rem;">' + e.title + '</h3><p style="color:var(--text-secondary);">' + (e.description || 'No description') + '</p><div style="font-size:0.85rem;color:var(--text-secondary);"><div><i class="fas fa-calendar"></i> ' + formatDate(e.startDate) + '</div><div><i class="fas fa-map-marker-alt"></i> ' + (e.venue || 'N/A') + '</div></div><div style="margin-top:12px;display:flex;gap:8px;"><button class="btn-sm" onclick="editEvent(\'' + e.id + '\')">Edit</button><button class="btn-sm" onclick="deleteEvent(\'' + e.id + '\')" style="color:var(--danger);">Delete</button></div></div>';
+            }).join('') : '<div style="text-align:center;padding:60px;color:var(--text-muted);">No events found</div>'}
         </div>
     `;
 }
@@ -408,7 +449,7 @@ function editEvent(id) {
 // ============================================
 
 function renderMediaPage(container) {
-    const media = DB.getAll('media');
+    var media = DB.getAll('media');
 
     container.innerHTML = `
         <div class="card">
@@ -451,51 +492,39 @@ function renderReportsPage(container) {
                 <h3>Attendance Report</h3>
                 <button class="btn-sm" style="margin-top:8px;">Generate</button>
             </div>
-            <div class="card" onclick="generateReport('giving')" style="cursor:pointer;text-align:center;padding:24px;">
-                <div style="font-size:2.5rem;color:var(--primary);margin-bottom:8px;"><i class="fas fa-hand-holding-heart"></i></div>
-                <h3>Giving Report</h3>
-                <button class="btn-sm" style="margin-top:8px;">Generate</button>
-            </div>
         </div>
     `;
 }
 
-// ============================================
-// GENERATE REPORTS
-// ============================================
-
 function generateReport(type) {
+    var members, giving, attendance, report, categories, services;
+
     switch (type) {
         case 'members':
-            const members = DB.getAll('members');
-            let report = 'MEMBER REPORT\n' + '='.repeat(40) + '\n\nTotal Members: ' + members.length + '\nActive: ' + members.filter(function(m) { return m.status === 'Active'; }).length + '\nInactive: ' + members.filter(function(m) { return m.status === 'Inactive'; }).length + '\n\nRecent Members:\n';
+            members = DB.getAll('members');
+            report = 'MEMBER REPORT\n' + '='.repeat(40) + '\n\nTotal Members: ' + members.length + '\nActive: ' + members.filter(function(m) { return m.status === 'Active'; }).length + '\nInactive: ' + members.filter(function(m) { return m.status === 'Inactive'; }).length + '\n\nRecent Members:\n';
             members.slice(0, 10).forEach(function(m) { report += '  - ' + m.firstName + ' ' + m.lastName + ' (' + m.status + ')\n'; });
             alert(report);
             showToast('Member report generated', 'success');
             break;
 
         case 'finance':
-        case 'giving':
-            const giving = DB.getAll('giving');
-            const total = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
-            let financeReport = 'FINANCIAL REPORT\n' + '='.repeat(40) + '\n\nTotal Giving: ' + formatCurrency(total) + '\n\nGiving by Category:\n';
-            const categories = {};
+            giving = DB.getAll('giving');
+            report = 'FINANCIAL REPORT\n' + '='.repeat(40) + '\n\nTotal Giving: ' + formatCurrency(giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0)) + '\n\nGiving by Category:\n';
+            categories = {};
             giving.forEach(function(g) { categories[g.category] = (categories[g.category] || 0) + parseFloat(g.amount); });
-            Object.entries(categories).forEach(function(entry) { financeReport += '  - ' + entry[0] + ': ' + formatCurrency(entry[1]) + '\n'; });
-            alert(financeReport);
+            Object.keys(categories).forEach(function(key) { report += '  - ' + key + ': ' + formatCurrency(categories[key]) + '\n'; });
+            alert(report);
             showToast('Financial report generated', 'success');
             break;
 
         case 'attendance':
-            const attendance = DB.getAll('attendance');
-            const present = attendance.filter(function(a) { return a.status === 'Present'; }).length;
-            const absent = attendance.filter(function(a) { return a.status === 'Absent'; }).length;
-            const late = attendance.filter(function(a) { return a.status === 'Late'; }).length;
-            let attReport = 'ATTENDANCE REPORT\n' + '='.repeat(40) + '\n\nTotal Records: ' + attendance.length + '\nPresent: ' + present + '\nAbsent: ' + absent + '\nLate: ' + late + '\n\nAttendance by Service Type:\n';
-            const services = {};
+            attendance = DB.getAll('attendance');
+            report = 'ATTENDANCE REPORT\n' + '='.repeat(40) + '\n\nTotal Records: ' + attendance.length + '\nPresent: ' + attendance.filter(function(a) { return a.status === 'Present'; }).length + '\nAbsent: ' + attendance.filter(function(a) { return a.status === 'Absent'; }).length + '\nLate: ' + attendance.filter(function(a) { return a.status === 'Late'; }).length + '\n\nAttendance by Service Type:\n';
+            services = {};
             attendance.forEach(function(a) { services[a.serviceType] = (services[a.serviceType] || 0) + 1; });
-            Object.entries(services).forEach(function(entry) { attReport += '  - ' + entry[0] + ': ' + entry[1] + '\n'; });
-            alert(attReport);
+            Object.keys(services).forEach(function(key) { report += '  - ' + key + ': ' + services[key] + '\n'; });
+            alert(report);
             showToast('Attendance report generated', 'success');
             break;
 
@@ -512,10 +541,10 @@ function showToast(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;
 
-    const container = document.getElementById('toastContainer');
+    var container = document.getElementById('toastContainer');
     if (!container) return;
 
-    const toast = document.createElement('div');
+    var toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
     container.appendChild(toast);
@@ -528,7 +557,7 @@ function showToast(message, type, duration) {
 }
 
 function showNotification() {
-    const dot = document.getElementById('notifDot');
+    var dot = document.getElementById('notifDot');
     if (dot) dot.style.display = 'none';
     showToast('You have 3 new notifications', 'info');
 }
@@ -538,31 +567,29 @@ function showNotification() {
 // ============================================
 
 function updateBadges() {
-    const memberBadge = document.getElementById('memberBadge');
-    const eventBadge = document.getElementById('eventBadge');
-    const financeBadge = document.getElementById('financeBadge');
-    const mediaBadge = document.getElementById('mediaBadge');
-    const notifBadge = document.getElementById('notifBadge');
-    const sermonBadge = document.getElementById('sermonBadge');
-    const mpesaBadge = document.getElementById('mpesaBadge');
-    const userBadge = document.getElementById('userBadge');
+    var badgeIds = ['memberBadge', 'eventBadge', 'financeBadge', 'mediaBadge', 'notifBadge', 'sermonBadge', 'mpesaBadge', 'userBadge'];
+    var collections = ['members', 'events', 'giving', 'media', 'notifications', 'sermons', 'mpesaTransactions', 'users'];
 
-    if (memberBadge) memberBadge.textContent = DB.getAll('members').length || 0;
-    if (eventBadge) eventBadge.textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length || 0;
-    if (financeBadge) financeBadge.textContent = DB.getAll('giving').length || 0;
-    if (mediaBadge) mediaBadge.textContent = DB.getAll('media').length || 0;
-    if (notifBadge) notifBadge.textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length || 0;
-    if (sermonBadge) sermonBadge.textContent = DB.getAll('sermons').length || 0;
-    if (mpesaBadge) mpesaBadge.textContent = DB.getAll('mpesaTransactions').length || 0;
-    if (userBadge) userBadge.textContent = DB.getAll('users').length || 0;
+    for (var i = 0; i < badgeIds.length; i++) {
+        var el = document.getElementById(badgeIds[i]);
+        if (!el) continue;
+
+        var data = DB.getAll(collections[i]);
+        if (collections[i] === 'events') {
+            data = data.filter(function(e) { return e.status === 'Upcoming'; });
+        } else if (collections[i] === 'notifications') {
+            data = data.filter(function(n) { return n.status === 'pending'; });
+        }
+        el.textContent = data.length || 0;
+    }
 }
 
 // ============================================
 // INSTALL BUTTON LOGIC
 // ============================================
 
-let deferredPrompt;
-let installBannerDismissed = localStorage.getItem('installBannerDismissed') === 'true';
+var deferredPrompt;
+var installBannerDismissed = localStorage.getItem('installBannerDismissed') === 'true';
 
 function installApp() {
     if (deferredPrompt) {
@@ -583,22 +610,22 @@ function installApp() {
 }
 
 function showInstallUI() {
-    const installBtn = document.getElementById('installBtn');
+    var installBtn = document.getElementById('installBtn');
     if (installBtn) {
         installBtn.style.display = 'flex';
     }
-    const banner = document.getElementById('installBanner');
+    var banner = document.getElementById('installBanner');
     if (banner && !installBannerDismissed && !window.matchMedia('(display-mode: standalone)').matches) {
         banner.style.display = 'block';
     }
 }
 
 function hideInstallUI() {
-    const installBtn = document.getElementById('installBtn');
+    var installBtn = document.getElementById('installBtn');
     if (installBtn) {
         installBtn.style.display = 'none';
     }
-    const banner = document.getElementById('installBanner');
+    var banner = document.getElementById('installBanner');
     if (banner) {
         banner.style.display = 'none';
     }
@@ -607,7 +634,7 @@ function hideInstallUI() {
 function dismissInstallBanner() {
     localStorage.setItem('installBannerDismissed', 'true');
     installBannerDismissed = true;
-    const banner = document.getElementById('installBanner');
+    var banner = document.getElementById('installBanner');
     if (banner) {
         banner.style.display = 'none';
     }
@@ -621,7 +648,6 @@ function checkIfInstalled() {
     return false;
 }
 
-// Before install prompt
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
@@ -631,53 +657,10 @@ window.addEventListener('beforeinstallprompt', function(e) {
     }
 });
 
-// App installed
 window.addEventListener('appinstalled', function() {
     console.log('App installed successfully');
     hideInstallUI();
     showToast('App installed successfully!', 'success');
-});
-
-// ============================================
-// INIT
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if already installed
-    checkIfInstalled();
-
-    // Load dashboard content
-    const container = document.getElementById('pageContent');
-    if (container) {
-        renderDashboard(container);
-    }
-
-    // Update badges
-    updateBadges();
-
-    // Update sidebar user
-    if (typeof updateSidebarUser === 'function') {
-        updateSidebarUser();
-    }
-
-    // Dark mode switch
-    const darkSwitch = document.getElementById('darkModeSwitch');
-    if (darkSwitch) {
-        darkSwitch.checked = App.darkMode;
-        darkSwitch.addEventListener('change', function() {
-            toggleTheme();
-        });
-    }
-
-    // Welcome toast
-    setTimeout(function() {
-        showToast('Welcome to Victory Life CMS', 'success');
-    }, 500);
-
-    // Initialize sync if available
-    if (typeof Sync !== 'undefined' && Sync.init) {
-        Sync.init();
-    }
 });
 
 // ============================================
@@ -701,21 +684,55 @@ window.editGiving = editGiving;
 window.deleteEvent = deleteEvent;
 window.editEvent = editEvent;
 window.updateBadges = updateBadges;
-window.renderDashboard = renderDashboard;
-window.renderMembersPage = renderMembersPage;
-window.renderAttendancePage = renderAttendancePage;
-window.renderFinancePage = renderFinancePage;
-window.renderEventsPage = renderEventsPage;
-window.renderMediaPage = renderMediaPage;
-window.renderReportsPage = renderReportsPage;
+window.updateSyncStatus = updateSyncStatus;
+window.manualSync = manualSync;
+window.updateOnlineUsers = updateOnlineUsers;
 
-// For backward compatibility with older pages
-window.loadPageContent = loadPageContent;
-window.renderAll = function() {
-    const container = document.getElementById('pageContent');
+// ============================================
+// INIT
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkIfInstalled();
+
+    var container = document.getElementById('pageContent');
     if (container) {
-        const page = App.currentPage || 'dashboard';
-        loadPageContent(page);
+        renderDashboard(container);
     }
+
     updateBadges();
-};
+
+    if (typeof updateSidebarUser === 'function') {
+        updateSidebarUser();
+    }
+
+    var darkSwitch = document.getElementById('darkModeSwitch');
+    if (darkSwitch) {
+        darkSwitch.checked = App.darkMode;
+        darkSwitch.addEventListener('change', function() {
+            toggleTheme();
+        });
+    }
+
+    setTimeout(function() {
+        showToast('Welcome to Victory Life CMS', 'success');
+    }, 500);
+
+    if (typeof Sync !== 'undefined' && Sync.init) {
+        setTimeout(function() {
+            Sync.init();
+        }, 1000);
+    }
+});
+
+// ============================================
+// LOGOUT FUNCTION
+// ============================================
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '../auth/login.html';
+    }
+}

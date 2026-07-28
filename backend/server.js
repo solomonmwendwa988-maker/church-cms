@@ -1,7 +1,3 @@
-// ============================================
-// VICTORY LIFE CMS - BACKEND (FIXED)
-// ============================================
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -16,10 +12,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ============================================
-// DATABASE CONNECTION
-// ============================================
-
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -27,22 +19,14 @@ const pool = new Pool({
 
 pool.connect((err) => {
     if (err) {
-        console.log('❌ Database connection failed:', err.message);
+        console.log('Database connection failed:', err.message);
     } else {
-        console.log('✅ Database connected successfully');
+        console.log('Database connected successfully');
     }
 });
 
-// ============================================
-// MIDDLEWARE
-// ============================================
-
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
-
-// ============================================
-// HTTP SERVER & SOCKET.IO
-// ============================================
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -52,12 +36,7 @@ const io = socketIo(server, {
     }
 });
 
-// Track online users
 let onlineUsers = {};
-
-// ============================================
-// AUTH MIDDLEWARE
-// ============================================
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -75,10 +54,6 @@ function authenticateToken(req, res, next) {
         return res.status(403).json({ error: 'Invalid or expired token.' });
     }
 }
-
-// ============================================
-// INIT DATABASE TABLES
-// ============================================
 
 async function initDatabase() {
     const queries = [
@@ -228,19 +203,15 @@ async function initDatabase() {
         try {
             await pool.query(query);
         } catch (err) {
-            console.log('⚠️ Table warning:', err.message);
+            console.log('Table creation warning:', err.message);
         }
     }
 
-    console.log('✅ Database tables initialized');
+    console.log('Database tables initialized');
 }
 
-// ============================================
-// WEBSOCKET EVENTS
-// ============================================
-
 io.on('connection', (socket) => {
-    console.log('🟢 Client connected:', socket.id);
+    console.log('Client connected:', socket.id);
 
     socket.on('user_online', (userData) => {
         onlineUsers[socket.id] = {
@@ -261,21 +232,18 @@ io.on('connection', (socket) => {
         delete onlineUsers[socket.id];
         const usersList = Object.values(onlineUsers);
         io.emit('users_online', usersList);
-        console.log('🔴 Client disconnected:', socket.id);
+        console.log('Client disconnected:', socket.id);
     });
 });
 
-// ============================================
-// HEALTH CHECK
-// ============================================
+function broadcastEvent(eventName, data) {
+    io.emit(eventName, data);
+    console.log('Broadcast:', eventName);
+}
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// ============================================
-// AUTH ROUTES
-// ============================================
 
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -302,6 +270,8 @@ app.post('/api/auth/register', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        broadcastEvent('user_created', user);
 
         res.json({ user, token });
     } catch (error) {
@@ -357,10 +327,6 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// MEMBERS ROUTES
-// ============================================
-
 app.get('/api/members', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM members ORDER BY created_at DESC');
@@ -380,7 +346,7 @@ app.post('/api/members', authenticateToken, async (req, res) => {
             [first_name, last_name, email, phone, address, join_date || new Date().toISOString().split('T')[0], status || 'Active', membership_type || 'Full', notes]
         );
         const member = result.rows[0];
-        io.emit('member_created', member);
+        broadcastEvent('member_created', member);
         res.status(201).json(member);
     } catch (error) {
         console.error('Create member error:', error);
@@ -403,7 +369,7 @@ app.put('/api/members/:id', authenticateToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Member not found' });
         }
-        io.emit('member_updated', result.rows[0]);
+        broadcastEvent('member_updated', result.rows[0]);
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update member' });
@@ -414,16 +380,12 @@ app.delete('/api/members/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM members WHERE id = $1', [id]);
-        io.emit('member_deleted', { id });
+        broadcastEvent('member_deleted', { id });
         res.json({ message: 'Member deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete member' });
     }
 });
-
-// ============================================
-// EVENTS ROUTES
-// ============================================
 
 app.get('/api/events', authenticateToken, async (req, res) => {
     try {
@@ -444,7 +406,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
             [title, description, category || 'Service', start_date, end_date, start_time, end_time, venue, capacity || 0, status || 'Upcoming', speaker, notes]
         );
         const event = result.rows[0];
-        io.emit('event_created', event);
+        broadcastEvent('event_created', event);
         res.status(201).json(event);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create event' });
@@ -466,7 +428,7 @@ app.put('/api/events/:id', authenticateToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
         }
-        io.emit('event_updated', result.rows[0]);
+        broadcastEvent('event_updated', result.rows[0]);
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update event' });
@@ -477,16 +439,12 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM events WHERE id = $1', [id]);
-        io.emit('event_deleted', { id });
+        broadcastEvent('event_deleted', { id });
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete event' });
     }
 });
-
-// ============================================
-// GIVING ROUTES
-// ============================================
 
 app.get('/api/giving', authenticateToken, async (req, res) => {
     try {
@@ -507,16 +465,12 @@ app.post('/api/giving', authenticateToken, async (req, res) => {
             [member_id, member_name, amount, category || 'Tithe', payment_method || 'Cash', date || new Date().toISOString().split('T')[0], receipt_number, notes]
         );
         const giving = result.rows[0];
-        io.emit('giving_created', giving);
+        broadcastEvent('giving_created', giving);
         res.status(201).json(giving);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create giving record' });
     }
 });
-
-// ============================================
-// USERS ROUTES
-// ============================================
 
 app.get('/api/users', authenticateToken, async (req, res) => {
     try {
@@ -532,9 +486,41 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// M-PESA ROUTES
-// ============================================
+app.put('/api/users/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        const id = parseInt(req.params.id);
+        const { name, email, role, status } = req.body;
+        const result = await pool.query(
+            `UPDATE users SET name = $1, email = $2, role = $3, status = $4, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $5 RETURNING id, name, email, role, status`,
+            [name, email, role, status, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        broadcastEvent('user_updated', result.rows[0]);
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        const id = parseInt(req.params.id);
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        broadcastEvent('user_deleted', { id });
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
 
 app.get('/api/mpesa', authenticateToken, async (req, res) => {
     try {
@@ -555,16 +541,12 @@ app.post('/api/mpesa', authenticateToken, async (req, res) => {
             [transaction_id, phone, amount, type || 'general', description, status || 'pending']
         );
         const transaction = result.rows[0];
-        io.emit('mpesa_transaction', transaction);
+        broadcastEvent('mpesa_transaction', transaction);
         res.status(201).json(transaction);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create M-Pesa transaction' });
     }
 });
-
-// ============================================
-// SERMONS ROUTES
-// ============================================
 
 app.get('/api/sermons', authenticateToken, async (req, res) => {
     try {
@@ -585,16 +567,153 @@ app.post('/api/sermons', authenticateToken, async (req, res) => {
             [title, series, preacher, date || new Date().toISOString().split('T')[0], description, scripture, notes, audio_url, duration, status || 'published']
         );
         const sermon = result.rows[0];
-        io.emit('sermon_created', sermon);
+        broadcastEvent('sermon_created', sermon);
         res.status(201).json(sermon);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create sermon' });
     }
 });
 
-// ============================================
-// SEED ADMIN USER
-// ============================================
+app.get('/api/prayer-requests', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM prayer_requests ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get prayer requests' });
+    }
+});
+
+app.post('/api/prayer-requests', authenticateToken, async (req, res) => {
+    try {
+        const { member_name, title, description, status, assigned_to } = req.body;
+        const result = await pool.query(
+            `INSERT INTO prayer_requests (member_name, title, description, status, assigned_to) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING *`,
+            [member_name, title, description, status || 'active', assigned_to]
+        );
+        const prayer = result.rows[0];
+        broadcastEvent('prayer_created', prayer);
+        res.status(201).json(prayer);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create prayer request' });
+    }
+});
+
+app.get('/api/budgets', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM budgets ORDER BY period DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get budgets' });
+    }
+});
+
+app.post('/api/budgets', authenticateToken, async (req, res) => {
+    try {
+        const { category, allocated, spent, period, notes } = req.body;
+        const result = await pool.query(
+            `INSERT INTO budgets (category, allocated, spent, period, notes) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING *`,
+            [category, allocated, spent || 0, period, notes]
+        );
+        const budget = result.rows[0];
+        broadcastEvent('budget_created', budget);
+        res.status(201).json(budget);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create budget' });
+    }
+});
+
+app.get('/api/pledges', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM pledges ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get pledges' });
+    }
+});
+
+app.post('/api/pledges', authenticateToken, async (req, res) => {
+    try {
+        const { member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes } = req.body;
+        const result = await pool.query(
+            `INSERT INTO pledges (member_id, member_name, amount, category, start_date, end_date, paid, balance, status, notes) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+             RETURNING *`,
+            [member_id, member_name, amount, category, start_date, end_date, paid || 0, balance || amount, status || 'active', notes]
+        );
+        const pledge = result.rows[0];
+        broadcastEvent('pledge_created', pledge);
+        res.status(201).json(pledge);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create pledge' });
+    }
+});
+
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get notifications' });
+    }
+});
+
+app.post('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+        const { type, subject, message, recipient, status, sent_at, channel } = req.body;
+        const result = await pool.query(
+            `INSERT INTO notifications (type, subject, message, recipient, status, sent_at, channel) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) 
+             RETURNING *`,
+            [type, subject, message, recipient, status || 'pending', sent_at || new Date().toISOString(), channel || 'email']
+        );
+        const notification = result.rows[0];
+        broadcastEvent('notification_created', notification);
+        res.status(201).json(notification);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create notification' });
+    }
+});
+
+app.get('/api/media', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name, type, mime_type, size, uploaded_at, created_at FROM media ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get media' });
+    }
+});
+
+app.post('/api/media', authenticateToken, async (req, res) => {
+    try {
+        const { name, type, mime_type, size, data, uploaded_at } = req.body;
+        const result = await pool.query(
+            `INSERT INTO media (name, type, mime_type, size, data, uploaded_at) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             RETURNING id, name, type, mime_type, size, uploaded_at, created_at`,
+            [name, type, mime_type, size, data, uploaded_at || new Date().toISOString()]
+        );
+        const media = result.rows[0];
+        broadcastEvent('media_created', media);
+        res.status(201).json(media);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create media' });
+    }
+});
+
+app.delete('/api/media/:id', authenticateToken, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        await pool.query('DELETE FROM media WHERE id = $1', [id]);
+        broadcastEvent('media_deleted', { id });
+        res.json({ message: 'Media deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete media' });
+    }
+});
 
 async function seedAdmin() {
     try {
@@ -607,18 +726,14 @@ async function seedAdmin() {
                  VALUES ($1, $2, $3, $4)`,
                 ['Admin User', 'admin@church.com', hashedPassword, 'admin']
             );
-            console.log('✅ Admin user created: admin@church.com / password123');
+            console.log('Admin user created: admin@church.com / password123');
         } else {
-            console.log('✅ Admin user already exists');
+            console.log('Admin user already exists');
         }
     } catch (error) {
-        console.log('⚠️ Admin seed warning:', error.message);
+        console.log('Admin seed warning:', error.message);
     }
 }
-
-// ============================================
-// START SERVER
-// ============================================
 
 async function startServer() {
     await initDatabase();
@@ -626,12 +741,12 @@ async function startServer() {
 
     server.listen(PORT, () => {
         console.log('');
-        console.log('╔══════════════════════════════════════════════════╗');
-        console.log('║     VICTORY LIFE CMS - BACKEND SERVER           ║');
-        console.log('╠══════════════════════════════════════════════════╣');
-        console.log(`║   🚀 Server running on http://localhost:${PORT}    ║`);
-        console.log(`║   📡 API: http://localhost:${PORT}/api            ║`);
-        console.log('╚══════════════════════════════════════════════════╝');
+        console.log('Victory Life CMS - Backend Server');
+        console.log('Server running on http://localhost:' + PORT);
+        console.log('API: http://localhost:' + PORT + '/api');
+        console.log('WebSocket: ws://localhost:' + PORT);
+        console.log('Database: PostgreSQL');
+        console.log('Real-time broadcasting: Enabled');
         console.log('');
     });
 }
