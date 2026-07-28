@@ -40,6 +40,11 @@
         <button>Install Now</button>
         <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
     </div>
+    <!-- Online Users Widget -->
+<div id="onlineUsers" style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:var(--bg);border-radius:20px;font-size:0.85rem;margin-bottom:16px;">
+    <span style="color:var(--success);">●</span>
+    <span>0 online</span>
+</div>
 
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
@@ -81,14 +86,15 @@
             </button>
         </nav>
         <div class="sidebar-footer">
-            <div class="user-card">
-                <div class="user-avatar">AD</div>
-                <div class="user-info">
-                    <span class="user-name">Admin User</span>
-                    <span class="user-role">Administrator</span>
-                </div>
-            </div>
+    <div class="user-card">
+        <div class="user-avatar" id="userAvatar">AD</div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Admin User</span>
+            <span class="user-role" id="userRole">Administrator</span>
         </div>
+        <span id="userRoleBadge" style="font-size:0.6rem;padding:2px 8px;border-radius:12px;border:1px solid var(--primary);color:var(--primary);">Admin</span>
+    </div>
+</div>
     </aside>
 
     <main class="main-content" id="mainContent">

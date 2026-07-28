@@ -36,6 +36,7 @@ async function login(email, password) {
             throw new Error(data.error || 'Login failed');
         }
 
+        // Store both token and user data
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -81,6 +82,19 @@ function updateSidebarUser() {
         if (avatarEl) avatarEl.textContent = user.name ? user.name.charAt(0).toUpperCase() : 'U';
         if (nameEl) nameEl.textContent = user.name || 'User';
         if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member';
+
+        // Update role badge
+        const badge = document.getElementById('userRoleBadge');
+        if (badge && user.role) {
+            const roleLabels = {
+                admin: 'Admin',
+                pastor: 'Pastor',
+                secretary: 'Secretary',
+                cashier: 'Cashier',
+                member: 'Member'
+            };
+            badge.textContent = roleLabels[user.role] || user.role;
+        }
     }
 }
 
@@ -106,4 +120,16 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     return data;
+}
+
+// Get current user's role
+function getUserRole() {
+    const user = getCurrentUser();
+    return user ? user.role : 'member';
+}
+
+// Check if user has a specific role
+function hasRole(role) {
+    const userRole = getUserRole();
+    return userRole === role || userRole === 'admin';
 }

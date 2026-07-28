@@ -1,6 +1,6 @@
 // ============================================
-// VICTORY LIFE CMS - SIMPLIFIED BACKEND
-// No Prisma - Uses raw PostgreSQL with 'pg' package
+// VICTORY LIFE CMS - COMPLETE BACKEND
+// With Real-time WebSocket Broadcasting
 // ============================================
 
 const express = require('express');
@@ -9,6 +9,8 @@ const dotenv = require('dotenv');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const http = require('http');
+const socketIo = require('socket.io');
 
 dotenv.config();
 
@@ -21,10 +23,9 @@ const PORT = process.env.PORT || 5000;
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Test database connection
 pool.connect((err) => {
     if (err) {
         console.log('❌ Database connection failed:', err.message);
@@ -39,6 +40,24 @@ pool.connect((err) => {
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
+
+// ============================================
+// HTTP SERVER & SOCKET.IO
+// ============================================
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE']
+    }
+});
+
+// ============================================
+// TRACK ONLINE USERS
+// ============================================
+
+let onlineUsers = {};
 
 // ============================================
 // AUTH MIDDLEWARE
@@ -251,30 +270,92 @@ async function initDatabase() {
 }
 
 // ============================================
-// AUTH ROUTES
+// WEBSOCKET EVENTS
 // ============================================
 
-// Health check
+io.on('connection', (socket) => {
+    console.log('🟢 Client connected:', socket.id);
+
+    // User comes online
+    socket.on('user_online', (userData) => {
+        onlineUsers[socket.id] = {
+            userId: userData.userId,
+            name: userData.name,
+            role: userData.role,
+            connectedAt: new Date().toISOString()
+        };
+        console.log(`👤 ${userData.name} (${userData.role}) is online`);
+        
+        // Broadcast updated online users list
+        const usersList = Object.values(onlineUsers);
+        io.emit('users_online', usersList);
+    });
+
+    // Join user's personal room
+    socket.on('join', (userId) => {
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} joined room`);
+    });
+
+    // Join admin room
+    socket.on('join_admin', () => {
+        socket.join('admin_room');
+        console.log('Admin joined admin room');
+    });
+
+    // Broadcast a change to all users
+    socket.on('broadcast_change', (data) => {
+        console.log('📢 Broadcast change:', data.type);
+        socket.broadcast.emit('data_changed', data);
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        const user = onlineUsers[socket.id];
+        if (user) {
+            console.log(`👤 ${user.name} went offline`);
+            delete onlineUsers[socket.id];
+            const usersList = Object.values(onlineUsers);
+            io.emit('users_online', usersList);
+        }
+        console.log('🔴 Client disconnected:', socket.id);
+    });
+});
+
+// ============================================
+// BROADCAST HELPERS
+// ============================================
+
+function broadcastEvent(eventName, data) {
+    io.emit(eventName, data);
+    console.log(`📢 Broadcast: ${eventName}`);
+}
+
+// ============================================
+// HEALTH CHECK
+// ============================================
+
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// ============================================
+// AUTH ROUTES
+// ============================================
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        // Check if user exists
         const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
         const result = await pool.query(
             `INSERT INTO users (name, email, password, role) 
              VALUES ($1, $2, $3, $4) 
@@ -283,13 +364,14 @@ app.post('/api/auth/register', async (req, res) => {
         );
 
         const user = result.rows[0];
-
-        // Generate token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        // Broadcast new user to admins
+        broadcastEvent('user_created', user);
 
         res.json({ user, token });
     } catch (error) {
@@ -380,6 +462,10 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
+        
+        // Broadcast user update
+        broadcastEvent('user_updated', result.rows[0]);
+        
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update user' });
@@ -393,6 +479,10 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
         }
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        
+        // Broadcast user deletion
+        broadcastEvent('user_deleted', { id });
+        
         res.json({ message: 'User deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete user' });
@@ -400,7 +490,7 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// MEMBERS ROUTES
+// MEMBERS ROUTES WITH BROADCAST
 // ============================================
 
 app.get('/api/members', authenticateToken, async (req, res) => {
@@ -434,7 +524,12 @@ app.post('/api/members', authenticateToken, async (req, res) => {
              RETURNING *`,
             [first_name, last_name, email, phone, address, date_of_birth, gender, join_date || new Date().toISOString().split('T')[0], status || 'Active', membership_type || 'Full', notes]
         );
-        res.status(201).json(result.rows[0]);
+        const member = result.rows[0];
+        
+        // BROADCAST: Member created
+        broadcastEvent('member_created', member);
+        
+        res.status(201).json(member);
     } catch (error) {
         console.error('Create member error:', error);
         res.status(500).json({ error: 'Failed to create member' });
@@ -456,6 +551,10 @@ app.put('/api/members/:id', authenticateToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Member not found' });
         }
+        
+        // BROADCAST: Member updated
+        broadcastEvent('member_updated', result.rows[0]);
+        
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update member' });
@@ -466,6 +565,10 @@ app.delete('/api/members/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM members WHERE id = $1', [id]);
+        
+        // BROADCAST: Member deleted
+        broadcastEvent('member_deleted', { id });
+        
         res.json({ message: 'Member deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete member' });
@@ -473,7 +576,7 @@ app.delete('/api/members/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// EVENTS ROUTES
+// EVENTS ROUTES WITH BROADCAST
 // ============================================
 
 app.get('/api/events', authenticateToken, async (req, res) => {
@@ -507,7 +610,12 @@ app.post('/api/events', authenticateToken, async (req, res) => {
              RETURNING *`,
             [title, description, category || 'Service', start_date, end_date, start_time, end_time, venue, capacity || 0, status || 'Upcoming', speaker, notes]
         );
-        res.status(201).json(result.rows[0]);
+        const event = result.rows[0];
+        
+        // BROADCAST: Event created
+        broadcastEvent('event_created', event);
+        
+        res.status(201).json(event);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create event' });
     }
@@ -528,6 +636,10 @@ app.put('/api/events/:id', authenticateToken, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
         }
+        
+        // BROADCAST: Event updated
+        broadcastEvent('event_updated', result.rows[0]);
+        
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update event' });
@@ -538,6 +650,10 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM events WHERE id = $1', [id]);
+        
+        // BROADCAST: Event deleted
+        broadcastEvent('event_deleted', { id });
+        
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete event' });
@@ -545,7 +661,7 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// GIVING ROUTES
+// GIVING ROUTES WITH BROADCAST
 // ============================================
 
 app.get('/api/giving', authenticateToken, async (req, res) => {
@@ -579,14 +695,19 @@ app.post('/api/giving', authenticateToken, async (req, res) => {
              RETURNING *`,
             [member_id, member_name, amount, category || 'Tithe', payment_method || 'Cash', date || new Date().toISOString().split('T')[0], receipt_number, notes, transaction_id]
         );
-        res.status(201).json(result.rows[0]);
+        const giving = result.rows[0];
+        
+        // BROADCAST: Giving created
+        broadcastEvent('giving_created', giving);
+        
+        res.status(201).json(giving);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create giving record' });
     }
 });
 
 // ============================================
-// M-PESA TRANSACTIONS ROUTES
+// M-PESA ROUTES WITH BROADCAST
 // ============================================
 
 app.get('/api/mpesa', authenticateToken, async (req, res) => {
@@ -607,14 +728,19 @@ app.post('/api/mpesa', authenticateToken, async (req, res) => {
              RETURNING *`,
             [transaction_id, phone, amount, type || 'general', description, status || 'pending']
         );
-        res.status(201).json(result.rows[0]);
+        const transaction = result.rows[0];
+        
+        // BROADCAST: M-Pesa transaction created
+        broadcastEvent('mpesa_transaction', transaction);
+        
+        res.status(201).json(transaction);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create M-Pesa transaction' });
     }
 });
 
 // ============================================
-// SERMONS ROUTES
+// SERMONS ROUTES WITH BROADCAST
 // ============================================
 
 app.get('/api/sermons', authenticateToken, async (req, res) => {
@@ -635,7 +761,12 @@ app.post('/api/sermons', authenticateToken, async (req, res) => {
              RETURNING *`,
             [title, series, preacher, date || new Date().toISOString().split('T')[0], description, scripture, notes, audio_url, duration, status || 'published']
         );
-        res.status(201).json(result.rows[0]);
+        const sermon = result.rows[0];
+        
+        // BROADCAST: Sermon created
+        broadcastEvent('sermon_created', sermon);
+        
+        res.status(201).json(sermon);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create sermon' });
     }
@@ -663,7 +794,11 @@ app.post('/api/prayer-requests', authenticateToken, async (req, res) => {
              RETURNING *`,
             [member_name, title, description, status || 'active', assigned_to]
         );
-        res.status(201).json(result.rows[0]);
+        const prayer = result.rows[0];
+        
+        broadcastEvent('prayer_created', prayer);
+        
+        res.status(201).json(prayer);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create prayer request' });
     }
@@ -691,7 +826,11 @@ app.post('/api/budgets', authenticateToken, async (req, res) => {
              RETURNING *`,
             [category, allocated, spent || 0, period, notes]
         );
-        res.status(201).json(result.rows[0]);
+        const budget = result.rows[0];
+        
+        broadcastEvent('budget_created', budget);
+        
+        res.status(201).json(budget);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create budget' });
     }
@@ -719,7 +858,11 @@ app.post('/api/pledges', authenticateToken, async (req, res) => {
              RETURNING *`,
             [member_id, member_name, amount, category, start_date, end_date, paid || 0, balance || amount, status || 'active', notes]
         );
-        res.status(201).json(result.rows[0]);
+        const pledge = result.rows[0];
+        
+        broadcastEvent('pledge_created', pledge);
+        
+        res.status(201).json(pledge);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create pledge' });
     }
@@ -747,7 +890,11 @@ app.post('/api/notifications', authenticateToken, async (req, res) => {
              RETURNING *`,
             [type, subject, message, recipient, status || 'pending', sent_at || new Date().toISOString(), channel || 'email', event_id]
         );
-        res.status(201).json(result.rows[0]);
+        const notification = result.rows[0];
+        
+        broadcastEvent('notification_created', notification);
+        
+        res.status(201).json(notification);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create notification' });
     }
@@ -775,7 +922,11 @@ app.post('/api/media', authenticateToken, async (req, res) => {
              RETURNING id, name, type, mime_type, size, uploaded_at, created_at`,
             [name, type, mime_type, size, data, uploaded_at || new Date().toISOString()]
         );
-        res.status(201).json(result.rows[0]);
+        const media = result.rows[0];
+        
+        broadcastEvent('media_created', media);
+        
+        res.status(201).json(media);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create media' });
     }
@@ -785,6 +936,9 @@ app.delete('/api/media/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pool.query('DELETE FROM media WHERE id = $1', [id]);
+        
+        broadcastEvent('media_deleted', { id });
+        
         res.json({ message: 'Media deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete media' });
@@ -800,7 +954,6 @@ app.post('/api/sync', authenticateToken, async (req, res) => {
         const { data } = req.body;
         const results = {};
 
-        // Sync members
         if (data.members && data.members.length > 0) {
             results.members = [];
             for (const member of data.members) {
@@ -817,6 +970,8 @@ app.post('/api/sync', authenticateToken, async (req, res) => {
                 results.members.push(result.rows[0]);
             }
         }
+
+        broadcastEvent('sync_completed', { userId: req.user.id });
 
         res.json({ success: true, results });
     } catch (error) {
@@ -857,14 +1012,16 @@ async function startServer() {
     await initDatabase();
     await seedAdmin();
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log('');
         console.log('╔══════════════════════════════════════════════════╗');
-        console.log('║     VICTORY LIFE CMS - BACKEND SERVER           ║');
+        console.log('║     VICTORY LIFE CMS - COMPLETE BACKEND         ║');
         console.log('╠══════════════════════════════════════════════════╣');
         console.log(`║   🚀 Server running on http://localhost:${PORT}    ║`);
         console.log(`║   📡 API: http://localhost:${PORT}/api            ║`);
+        console.log(`║   🔗 WebSocket: ws://localhost:${PORT}             ║`);
         console.log('║   🔗 Database: PostgreSQL                        ║');
+        console.log('║   📢 Real-time broadcasting: ENABLED            ║');
         console.log('╚══════════════════════════════════════════════════╝');
         console.log('');
     });
