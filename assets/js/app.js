@@ -5,92 +5,37 @@
 const App = {
     currentPage: 'dashboard',
     darkMode: localStorage.getItem('theme') === 'dark',
-    sidebarOpen: false
+    sidebarOpen: false,
+    user: {
+        name: 'Admin User',
+        role: 'Administrator',
+        avatar: 'AD'
+    }
 };
 
 // ============================================
 // THEME MANAGEMENT
 // ============================================
 
-// ============================================
-// INSTALL APP BUTTON
-// ============================================
-
-let deferredPrompt;
-let isAppInstalled = false;
-
-// Show install button immediately
-document.addEventListener('DOMContentLoaded', function() {
-    const installBtn = document.getElementById('installBtn');
-    if (installBtn) {
-        installBtn.style.display = 'flex';
-    }
-});
-
-// Listen for beforeinstallprompt
-window.addEventListener('beforeinstallprompt', function(e) {
-    e.preventDefault();
-    deferredPrompt = e;
-    const installBtn = document.getElementById('installBtn');
-    if (installBtn) {
-        installBtn.style.display = 'flex';
-    }
-});
-
-// Listen for app installed
-window.addEventListener('appinstalled', function() {
-    isAppInstalled = true;
-    const installBtn = document.getElementById('installBtn');
-    if (installBtn) {
-        installBtn.style.display = 'none';
-    }
-    showToast('App installed successfully!', 'success');
-});
-
-// Install function
-function installApp() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function(choiceResult) {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted install');
-            } else {
-                console.log('User dismissed install');
-            }
-            deferredPrompt = null;
-        });
-    } else {
-        showToast('Open this page in Chrome and tap "Add to Home Screen"', 'info');
-    }
-}
-
-// Check if already installed
-function checkIfInstalled() {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        isAppInstalled = true;
-        const installBtn = document.getElementById('installBtn');
-        if (installBtn) {
-            installBtn.style.display = 'none';
-        }
-    }
-}
-
-// Run check
-document.addEventListener('DOMContentLoaded', function() {
-    checkIfInstalled();
-});
-
 function toggleTheme() {
     App.darkMode = !App.darkMode;
     document.documentElement.setAttribute('data-theme', App.darkMode ? 'dark' : 'light');
     localStorage.setItem('theme', App.darkMode ? 'dark' : 'light');
+
     const icon = document.querySelector('#themeBtn i');
     if (icon) {
         icon.className = App.darkMode ? 'fas fa-sun' : 'fas fa-moon';
     }
+
+    const darkSwitch = document.getElementById('darkModeSwitch');
+    if (darkSwitch) {
+        darkSwitch.checked = App.darkMode;
+    }
+
     showToast(App.darkMode ? 'Dark mode activated' : 'Light mode activated', 'success');
 }
 
+// Load saved theme
 (function loadTheme() {
     if (App.darkMode) {
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -108,6 +53,12 @@ function toggleSidebar() {
     App.sidebarOpen = !App.sidebarOpen;
     sidebar.classList.toggle('open');
     sidebar.classList.toggle('closed');
+
+    if (App.sidebarOpen) {
+        document.addEventListener('click', closeSidebarOutside);
+    } else {
+        document.removeEventListener('click', closeSidebarOutside);
+    }
 }
 
 function closeSidebarOutside(e) {
@@ -121,24 +72,37 @@ function closeSidebarOutside(e) {
     }
 }
 
-document.addEventListener('click', closeSidebarOutside);
+// Close sidebar on resize to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.remove('open');
+        sidebar.classList.add('closed');
+        App.sidebarOpen = false;
+    }
+});
 
 // ============================================
 // NAVIGATION
 // ============================================
 
 function navigateTo(page) {
-    if (page === 'settings') {
-        window.location.href = '../settings/index.html';
+    // Handle pages that need full page reload
+    if (page === 'settings' || page === 'users' || page === 'media' || page === 'reports' || 
+        page === 'sermons' || page === 'analytics' || page === 'mpesa' || page === 'notifications') {
+        window.location.href = '../' + page + '/index.html';
         return;
     }
+
     App.currentPage = page;
+
     document.querySelectorAll('.nav-item').forEach(function(el) {
         el.classList.remove('active');
         if (el.dataset.page === page) {
             el.classList.add('active');
         }
     });
+
     const titles = {
         dashboard: 'Dashboard',
         members: 'Members',
@@ -149,28 +113,48 @@ function navigateTo(page) {
         reports: 'Reports',
         settings: 'Settings'
     };
+
     const titleEl = document.getElementById('pageTitle');
     if (titleEl) titleEl.textContent = titles[page] || 'Dashboard';
+
     if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebar').classList.add('closed');
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.remove('open');
+        sidebar.classList.add('closed');
         App.sidebarOpen = false;
     }
+
     loadPageContent(page);
 }
 
 function loadPageContent(page) {
     const container = document.getElementById('pageContent');
     if (!container) return;
+
     switch (page) {
-        case 'dashboard': renderDashboard(container); break;
-        case 'members': renderMembersPage(container); break;
-        case 'attendance': renderAttendancePage(container); break;
-        case 'finance': renderFinancePage(container); break;
-        case 'events': renderEventsPage(container); break;
-        case 'media': renderMediaPage(container); break;
-        case 'reports': renderReportsPage(container); break;
-        default: container.innerHTML = '<h2>Page not found</h2>';
+        case 'dashboard':
+            renderDashboard(container);
+            break;
+        case 'members':
+            renderMembersPage(container);
+            break;
+        case 'attendance':
+            renderAttendancePage(container);
+            break;
+        case 'finance':
+            renderFinancePage(container);
+            break;
+        case 'events':
+            renderEventsPage(container);
+            break;
+        case 'media':
+            renderMediaPage(container);
+            break;
+        case 'reports':
+            renderReportsPage(container);
+            break;
+        default:
+            container.innerHTML = '<h2>Page not found</h2>';
     }
 }
 
@@ -194,7 +178,10 @@ function renderDashboard(container) {
 
     updateBadges();
 
+    const recentGiving = giving.slice(0, 3);
+
     container.innerHTML = `
+        <!-- Stats Grid -->
         <section class="stats-grid">
             <div class="stat-card" onclick="navigateTo('members')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-users"></i></div></div>
@@ -202,24 +189,28 @@ function renderDashboard(container) {
                 <div class="stat-label">Total Members</div>
                 <span class="stat-change positive">${activeMembers} active</span>
             </div>
+
             <div class="stat-card" onclick="navigateTo('events')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-calendar-alt"></i></div></div>
                 <div class="stat-value">${upcomingEvents}</div>
                 <div class="stat-label">Upcoming Events</div>
                 <span class="stat-change">${events.length > 0 ? events[0].title : 'None'}</span>
             </div>
+
             <div class="stat-card" onclick="navigateTo('finance')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-coins"></i></div></div>
                 <div class="stat-value">${formatCurrency(totalGiving)}</div>
                 <div class="stat-label">Total Giving</div>
                 <span class="stat-change positive">${giving.length} transactions</span>
             </div>
+
             <div class="stat-card" onclick="navigateTo('attendance')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-clipboard-check"></i></div></div>
                 <div class="stat-value">${attendance.length}</div>
                 <div class="stat-label">Attendance Records</div>
                 <span class="stat-change positive">${totalAttended} present</span>
             </div>
+
             <div class="stat-card" onclick="navigateTo('media')">
                 <div class="stat-top"><div class="stat-icon"><i class="fas fa-photo-video"></i></div></div>
                 <div class="stat-value">${totalMedia}</div>
@@ -227,6 +218,8 @@ function renderDashboard(container) {
                 <span class="stat-change">${media.length > 0 ? 'Uploaded' : 'Empty'}</span>
             </div>
         </section>
+
+        <!-- Dashboard Grid -->
         <section class="dashboard-grid">
             <div class="card">
                 <div class="card-header">
@@ -234,19 +227,22 @@ function renderDashboard(container) {
                     <button class="card-action" onclick="navigateTo('reports')">View All</button>
                 </div>
                 <div class="item-list">
-                    ${giving.slice(0, 3).map(function(g) {
+                    ${recentGiving.length > 0 ? recentGiving.map(function(g) {
                         return `<div class="item"><div class="item-icon"><i class="fas fa-hand-holding-heart"></i></div><div class="item-content"><div class="item-title">${g.memberName} gave ${formatCurrency(g.amount)}</div><div class="item-meta">${formatDate(g.date)} · ${g.category}</div></div><span class="item-status active">${g.paymentMethod}</span></div>`;
-                    }).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recent giving</div>'}
+                    }).join('') : '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recent giving</div>'}
                 </div>
             </div>
+
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:10px;">
                     <button class="btn-primary" onclick="window.location.href='../members/add.html'" style="width:100%;justify-content:center;"><i class="fas fa-user-plus"></i> Add Member</button>
-                    <button class="btn-primary" onclick="window.location.href='../events/add.html'" style="width:100%;justify-content:center;"><i class="fas fa-calendar-plus"></i> Create Event</button>
-                    <button class="btn-primary" onclick="window.location.href='../finance/add.html'" style="width:100%;justify-content:center;"><i class="fas fa-hand-holding-heart"></i> Record Giving</button>
+                    <button class="btn-primary" onclick="window.location.href='../events/add.html'" style="width:100%;justify-content:center;background:var(--success);"><i class="fas fa-calendar-plus"></i> Create Event</button>
+                    <button class="btn-primary" onclick="window.location.href='../finance/add.html'" style="width:100%;justify-content:center;background:var(--warning);"><i class="fas fa-hand-holding-heart"></i> Record Giving</button>
+                    <button class="btn-secondary" onclick="window.location.href='../attendance/checkin.html'" style="width:100%;justify-content:center;"><i class="fas fa-clipboard-check"></i> Mark Attendance</button>
+                    <button class="btn-secondary" onclick="window.location.href='../users/index.html'" style="width:100%;justify-content:center;"><i class="fas fa-user-cog"></i> Manage Users</button>
                 </div>
             </div>
         </section>
@@ -259,6 +255,7 @@ function renderDashboard(container) {
 
 function renderMembersPage(container) {
     const members = DB.getAll('members');
+
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
@@ -412,6 +409,7 @@ function editEvent(id) {
 
 function renderMediaPage(container) {
     const media = DB.getAll('media');
+
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
@@ -448,52 +446,80 @@ function renderReportsPage(container) {
                 <h3>Financial Report</h3>
                 <button class="btn-sm" style="margin-top:8px;">Generate</button>
             </div>
+            <div class="card" onclick="generateReport('attendance')" style="cursor:pointer;text-align:center;padding:24px;">
+                <div style="font-size:2.5rem;color:var(--primary);margin-bottom:8px;"><i class="fas fa-clipboard-check"></i></div>
+                <h3>Attendance Report</h3>
+                <button class="btn-sm" style="margin-top:8px;">Generate</button>
+            </div>
+            <div class="card" onclick="generateReport('giving')" style="cursor:pointer;text-align:center;padding:24px;">
+                <div style="font-size:2.5rem;color:var(--primary);margin-bottom:8px;"><i class="fas fa-hand-holding-heart"></i></div>
+                <h3>Giving Report</h3>
+                <button class="btn-sm" style="margin-top:8px;">Generate</button>
+            </div>
         </div>
     `;
 }
 
+// ============================================
+// GENERATE REPORTS
+// ============================================
+
 function generateReport(type) {
     switch (type) {
-        case 'members': generateMemberReport(); break;
-        case 'finance': generateFinanceReport(); break;
-        default: showToast('Report type not found', 'error');
+        case 'members':
+            const members = DB.getAll('members');
+            let report = 'MEMBER REPORT\n' + '='.repeat(40) + '\n\nTotal Members: ' + members.length + '\nActive: ' + members.filter(function(m) { return m.status === 'Active'; }).length + '\nInactive: ' + members.filter(function(m) { return m.status === 'Inactive'; }).length + '\n\nRecent Members:\n';
+            members.slice(0, 10).forEach(function(m) { report += '  - ' + m.firstName + ' ' + m.lastName + ' (' + m.status + ')\n'; });
+            alert(report);
+            showToast('Member report generated', 'success');
+            break;
+
+        case 'finance':
+        case 'giving':
+            const giving = DB.getAll('giving');
+            const total = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
+            let financeReport = 'FINANCIAL REPORT\n' + '='.repeat(40) + '\n\nTotal Giving: ' + formatCurrency(total) + '\n\nGiving by Category:\n';
+            const categories = {};
+            giving.forEach(function(g) { categories[g.category] = (categories[g.category] || 0) + parseFloat(g.amount); });
+            Object.entries(categories).forEach(function(entry) { financeReport += '  - ' + entry[0] + ': ' + formatCurrency(entry[1]) + '\n'; });
+            alert(financeReport);
+            showToast('Financial report generated', 'success');
+            break;
+
+        case 'attendance':
+            const attendance = DB.getAll('attendance');
+            const present = attendance.filter(function(a) { return a.status === 'Present'; }).length;
+            const absent = attendance.filter(function(a) { return a.status === 'Absent'; }).length;
+            const late = attendance.filter(function(a) { return a.status === 'Late'; }).length;
+            let attReport = 'ATTENDANCE REPORT\n' + '='.repeat(40) + '\n\nTotal Records: ' + attendance.length + '\nPresent: ' + present + '\nAbsent: ' + absent + '\nLate: ' + late + '\n\nAttendance by Service Type:\n';
+            const services = {};
+            attendance.forEach(function(a) { services[a.serviceType] = (services[a.serviceType] || 0) + 1; });
+            Object.entries(services).forEach(function(entry) { attReport += '  - ' + entry[0] + ': ' + entry[1] + '\n'; });
+            alert(attReport);
+            showToast('Attendance report generated', 'success');
+            break;
+
+        default:
+            showToast('Report type not found', 'error');
     }
 }
 
-function generateMemberReport() {
-    const members = DB.getAll('members');
-    const total = members.length;
-    const active = members.filter(function(m) { return m.status === 'Active'; }).length;
-    let report = 'MEMBER REPORT\n' + '='.repeat(40) + '\n\nTotal Members: ' + total + '\nActive: ' + active + '\nInactive: ' + (total - active) + '\n\nRecent Members:\n';
-    members.slice(0, 10).forEach(function(m) { report += '  - ' + m.firstName + ' ' + m.lastName + ' (' + m.status + ')\n'; });
-    alert(report);
-    showToast('Member report generated', 'success');
-}
-
-function generateFinanceReport() {
-    const giving = DB.getAll('giving');
-    const total = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
-    let report = 'FINANCIAL REPORT\n' + '='.repeat(40) + '\n\nTotal Giving: ' + formatCurrency(total) + '\n\nGiving by Category:\n';
-    const categories = {};
-    giving.forEach(function(g) { categories[g.category] = (categories[g.category] || 0) + parseFloat(g.amount); });
-    Object.entries(categories).forEach(function(entry) { report += '  - ' + entry[0] + ': ' + formatCurrency(entry[1]) + '\n'; });
-    alert(report);
-    showToast('Financial report generated', 'success');
-}
-
 // ============================================
-// TOAST
+// TOAST SYSTEM
 // ============================================
 
 function showToast(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;
+
     const container = document.getElementById('toastContainer');
     if (!container) return;
+
     const toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
     container.appendChild(toast);
+
     setTimeout(function() {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(30px)';
@@ -516,11 +542,19 @@ function updateBadges() {
     const eventBadge = document.getElementById('eventBadge');
     const financeBadge = document.getElementById('financeBadge');
     const mediaBadge = document.getElementById('mediaBadge');
+    const notifBadge = document.getElementById('notifBadge');
+    const sermonBadge = document.getElementById('sermonBadge');
+    const mpesaBadge = document.getElementById('mpesaBadge');
+    const userBadge = document.getElementById('userBadge');
 
-    if (memberBadge) memberBadge.textContent = DB.getAll('members').length;
-    if (eventBadge) eventBadge.textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
-    if (financeBadge) financeBadge.textContent = DB.getAll('giving').length;
-    if (mediaBadge) mediaBadge.textContent = DB.getAll('media').length;
+    if (memberBadge) memberBadge.textContent = DB.getAll('members').length || 0;
+    if (eventBadge) eventBadge.textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length || 0;
+    if (financeBadge) financeBadge.textContent = DB.getAll('giving').length || 0;
+    if (mediaBadge) mediaBadge.textContent = DB.getAll('media').length || 0;
+    if (notifBadge) notifBadge.textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length || 0;
+    if (sermonBadge) sermonBadge.textContent = DB.getAll('sermons').length || 0;
+    if (mpesaBadge) mpesaBadge.textContent = DB.getAll('mpesaTransactions').length || 0;
+    if (userBadge) userBadge.textContent = DB.getAll('users').length || 0;
 }
 
 // ============================================
@@ -579,15 +613,27 @@ function dismissInstallBanner() {
     }
 }
 
+function checkIfInstalled() {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        hideInstallUI();
+        return true;
+    }
+    return false;
+}
+
+// Before install prompt
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
+    console.log('App can be installed');
     if (!window.matchMedia('(display-mode: standalone)').matches) {
         showInstallUI();
     }
 });
 
+// App installed
 window.addEventListener('appinstalled', function() {
+    console.log('App installed successfully');
     hideInstallUI();
     showToast('App installed successfully!', 'success');
 });
@@ -598,9 +644,7 @@ window.addEventListener('appinstalled', function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        hideInstallUI();
-    }
+    checkIfInstalled();
 
     // Load dashboard content
     const container = document.getElementById('pageContent');
@@ -608,10 +652,70 @@ document.addEventListener('DOMContentLoaded', function() {
         renderDashboard(container);
     }
 
+    // Update badges
     updateBadges();
+
+    // Update sidebar user
+    if (typeof updateSidebarUser === 'function') {
+        updateSidebarUser();
+    }
+
+    // Dark mode switch
+    const darkSwitch = document.getElementById('darkModeSwitch');
+    if (darkSwitch) {
+        darkSwitch.checked = App.darkMode;
+        darkSwitch.addEventListener('change', function() {
+            toggleTheme();
+        });
+    }
 
     // Welcome toast
     setTimeout(function() {
         showToast('Welcome to Victory Life CMS', 'success');
     }, 500);
+
+    // Initialize sync if available
+    if (typeof Sync !== 'undefined' && Sync.init) {
+        Sync.init();
+    }
 });
+
+// ============================================
+// EXPOSE FUNCTIONS GLOBALLY
+// ============================================
+
+window.navigateTo = navigateTo;
+window.toggleSidebar = toggleSidebar;
+window.toggleTheme = toggleTheme;
+window.logout = logout;
+window.installApp = installApp;
+window.dismissInstallBanner = dismissInstallBanner;
+window.checkIfInstalled = checkIfInstalled;
+window.showToast = showToast;
+window.showNotification = showNotification;
+window.generateReport = generateReport;
+window.deleteMember = deleteMember;
+window.deleteAttendance = deleteAttendance;
+window.deleteGiving = deleteGiving;
+window.editGiving = editGiving;
+window.deleteEvent = deleteEvent;
+window.editEvent = editEvent;
+window.updateBadges = updateBadges;
+window.renderDashboard = renderDashboard;
+window.renderMembersPage = renderMembersPage;
+window.renderAttendancePage = renderAttendancePage;
+window.renderFinancePage = renderFinancePage;
+window.renderEventsPage = renderEventsPage;
+window.renderMediaPage = renderMediaPage;
+window.renderReportsPage = renderReportsPage;
+
+// For backward compatibility with older pages
+window.loadPageContent = loadPageContent;
+window.renderAll = function() {
+    const container = document.getElementById('pageContent');
+    if (container) {
+        const page = App.currentPage || 'dashboard';
+        loadPageContent(page);
+    }
+    updateBadges();
+};
