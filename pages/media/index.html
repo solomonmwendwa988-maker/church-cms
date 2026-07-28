@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="media" onclick="window.location.href='index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Media Library</span>
+                <span class="page-subtitle">Manage church photos, videos, and documents</span>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h3><i class="fas fa-upload"></i> Upload Media</h3>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Up to 300MB per file</span>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <input type="file" id="mediaUpload" accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple style="display:none;" onchange="uploadMedia(event)">
+                <button class="btn-primary" onclick="document.getElementById('mediaUpload').click()">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose Files
+                </button>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">
+                    <i class="fas fa-info-circle"></i> Images, Videos, PDFs, Word, Excel supported
+                </span>
+            </div>
+            <div id="uploadProgress" class="upload-progress">
+                <div class="progress-bar">
+                    <div id="uploadProgressBar" class="progress-fill" style="width:0%;"></div>
+                </div>
+                <div id="uploadStatus" class="progress-status">Ready to upload...</div>
+            </div>
+        </div>
+
+        <!-- Media Gallery -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-images"></i> Media Gallery</h3>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <select id="mediaFilter" onchange="renderMedia()" style="padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+                        <option value="all">All Media</option>
+                        <option value="image">Images</option>
+                        <option value="video">Videos</option>
+                        <option value="document">Documents</option>
+                    </select>
+                    <button class="btn-sm" onclick="renderMedia()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+            </div>
+            <div id="mediaGrid" class="media-grid">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // UPLOAD MEDIA - 300MB SUPPORT
+        // ============================================
+        function uploadMedia(event) {
+            var files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            var progressDiv = document.getElementById('uploadProgress');
+            var progressBar = document.getElementById('uploadProgressBar');
+            var statusText = document.getElementById('uploadStatus');
+
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            statusText.textContent = 'Processing files...';
+
+            var total = files.length;
+            var completed = 0;
+            var errors = [];
+
+            Array.from(files).forEach(function(file, index) {
+                // Check file size - 300MB limit
+                if (file.size > 300 * 1024 * 1024) {
+                    errors.push(file.name + ' exceeds 300MB limit');
+                    completed++;
+                    updateProgress(completed, total, errors);
+                    return;
+                }
+
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var dataUrl = e.target.result;
+
+                    // For images, compress if too large
+                    if (file.type.startsWith('image/')) {
+                        compressImage(dataUrl, function(compressed) {
+                            saveMedia(file, compressed);
+                        });
+                    } else {
+                        saveMedia(file, dataUrl);
+                    }
+                };
+
+                reader.onerror = function() {
+                    errors.push(file.name + ' failed to read');
+                    completed++;
+                    updateProgress(completed, total, errors);
+                };
+
+                reader.readAsDataURL(file);
+            });
+
+            function saveMedia(file, dataUrl) {
+                var type = file.type.split('/')[0];
+                var mediaTypes = {
+                    'image': 'image',
+                    'video': 'video',
+                    'application': 'document'
+                };
+                var mediaType = mediaTypes[type] || 'document';
+
+                DB.add('media', {
+                    name: file.name,
+                    type: mediaType,
+                    mimeType: file.type,
+                    size: file.size,
+                    data: dataUrl,
+                    uploadedAt: new Date().toISOString()
+                });
+
+                completed++;
+                updateProgress(completed, total, errors);
+                document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            }
+
+            event.target.value = '';
+        }
+
+        function compressImage(dataUrl, callback) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+
+                var maxWidth = 1920;
+                var maxHeight = 1080;
+                var width = img.width;
+                var height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    var ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = width * ratio;
+                    height = height * ratio;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+
+                var quality = 0.92;
+                var compressed = canvas.toDataURL('image/jpeg', quality);
+                callback(compressed);
+            };
+            img.src = dataUrl;
+        }
+
+        function updateProgress(completed, total, errors) {
+            var progressBar = document.getElementById('uploadProgressBar');
+            var statusText = document.getElementById('uploadStatus');
+            var percent = Math.round((completed / total) * 100);
+
+            progressBar.style.width = percent + '%';
+
+            if (completed === total) {
+                if (errors.length > 0) {
+                    statusText.textContent = 'Upload complete with ' + errors.length + ' errors';
+                    showToast('Upload complete with errors: ' + errors.join('; '), 'warning');
+                } else {
+                    statusText.textContent = 'Upload complete!';
+                    showToast('All files uploaded successfully', 'success');
+                    renderMedia();
+                    document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+                }
+                setTimeout(function() {
+                    progressDiv.style.display = 'none';
+                }, 3000);
+            } else {
+                statusText.textContent = 'Uploading ' + completed + '/' + total + '...';
+            }
+        }
+
+        // ============================================
+        // RENDER MEDIA
+        // ============================================
+        function renderMedia() {
+            var filter = document.getElementById('mediaFilter').value;
+            var media = DB.getAll('media');
+
+            if (filter !== 'all') {
+                media = media.filter(function(m) { return m.type === filter; });
+            }
+
+            var grid = document.getElementById('mediaGrid');
+
+            if (media.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);"><i class="fas fa-images" style="font-size:3rem;display:block;margin-bottom:12px;"></i>No media uploaded yet</div>';
+                return;
+            }
+
+            grid.innerHTML = media.slice().reverse().map(function(m) {
+                var preview = '';
+                var isImage = m.type === 'image';
+                var isVideo = m.type === 'video';
+                var isDocument = m.type === 'document';
+
+                if (isImage) {
+                    preview = '<div class="media-preview"><img src="' + m.data + '" alt="' + m.name + '" loading="lazy"></div>';
+                } else if (isVideo) {
+                    preview = '<div class="media-preview"><video src="' + m.data + '" muted></video></div>';
+                } else {
+                    var iconClass = 'fa-file-pdf';
+                    if (m.mimeType && m.mimeType.includes('word')) iconClass = 'fa-file-word';
+                    else if (m.mimeType && m.mimeType.includes('excel')) iconClass = 'fa-file-excel';
+                    else if (m.mimeType && m.mimeType.includes('powerpoint')) iconClass = 'fa-file-powerpoint';
+                    preview = '<div class="media-preview"><div class="media-placeholder"><i class="fas ' + iconClass + '"></i></div></div>';
+                }
+
+                var size = (m.size / 1024).toFixed(1) + ' KB';
+                if (m.size > 1024 * 1024) {
+                    size = (m.size / (1024 * 1024)).toFixed(1) + ' MB';
+                }
+
+                var typeLabel = m.type.charAt(0).toUpperCase() + m.type.slice(1);
+
+                return `
+                    <div class="media-card" onclick="viewMedia('${m.id}')">
+                        ${preview}
+                        <div class="media-info">
+                            <div class="media-name" title="${m.name}">${m.name}</div>
+                            <div class="media-meta">${typeLabel} · ${size}</div>
+                            <div class="media-actions">
+                                <button class="btn-sm" onclick="event.stopPropagation();deleteMedia('${m.id}')" style="color:var(--danger);width:100%;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+        }
+
+        // ============================================
+        // VIEW MEDIA
+        // ============================================
+        function viewMedia(id) {
+            var media = DB.get('media', id);
+            if (!media) return;
+
+            if (media.type === 'image') {
+                var win = window.open('', '_blank');
+                win.document.write('<html><head><title>' + media.name + '</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#0f172a;}img{max-width:95%;max-height:95vh;object-fit:contain;}</style></head><body><img src="' + media.data + '" alt="' + media.name + '"></body></html>');
+                win.document.close();
+            } else if (media.type === 'video') {
+                var win = window.open('', '_blank');
+                win.document.write('<html><head><title>' + media.name + '</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#0f172a;}video{max-width:95%;max-height:95vh;}</style></head><body><video src="' + media.data + '" controls autoplay></video></body></html>');
+                win.document.close();
+            } else {
+                var win = window.open('', '_blank');
+                win.document.write('<html><head><title>' + media.name + '</title><style>body{font-family:sans-serif;padding:40px;background:#f1f5f9;}pre{background:white;padding:20px;border-radius:8px;overflow:auto;max-height:80vh;}</style></head><body><h2>' + media.name + '</h2><p><a href="' + media.data + '" download>Download File</a></p></body></html>');
+                win.document.close();
+            }
+        }
+
+        // ============================================
+        // DELETE MEDIA
+        // ============================================
+        function deleteMedia(id) {
+            if (confirm('Delete this media file?')) {
+                DB.delete('media', id);
+                renderMedia();
+                document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+                showToast('Media deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMedia();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+        });
+
+        window.navigateTo = function(page) {
+            window.location.href = '../' + page + '/index.html';
+        };
+    </script>
+</body>
+</html>

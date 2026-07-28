@@ -1,0 +1,38 @@
+<!-- SIDEBAR COMPONENT -->
+<aside class="sidebar" id="sidebar">
+    <nav class="sidebar-nav">
+        <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+            <i class="fas fa-chart-pie"></i> Dashboard
+        </button>
+        <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+            <i class="fas fa-users"></i> Members
+            <span class="badge" id="memberBadge">0</span>
+        </button>
+        <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+            <i class="fas fa-clipboard-check"></i> Attendance
+        </button>
+        <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+            <i class="fas fa-coins"></i> Finance
+            <span class="badge" id="financeBadge">0</span>
+        </button>
+        <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+            <i class="fas fa-calendar-alt"></i> Events
+            <span class="badge" id="eventBadge">0</span>
+        </button>
+        <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+            <i class="fas fa-file-alt"></i> Reports
+        </button>
+        <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+            <i class="fas fa-cog"></i> Settings
+        </button>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar">AD</div>
+            <div class="user-info">
+                <span class="user-name">Admin User</span>
+                <span class="user-role">Administrator</span>
+            </div>
+        </div>
+    </div>
+</aside>

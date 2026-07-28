@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prayer - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="prayer" onclick="window.location.href='index.html'">
+                <i class="fas fa-pray"></i> Prayer
+                <span class="badge" id="prayerBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="budget" onclick="window.location.href='../budget/index.html'">
+                <i class="fas fa-chart-pie"></i> Budget
+            </button>
+            <button class="nav-item" data-page="pledges" onclick="window.location.href='../pledges/index.html'">
+                <i class="fas fa-handshake"></i> Pledges
+                <span class="badge" id="pledgeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="users" onclick="window.location.href='../users/index.html'">
+                <i class="fas fa-user-cog"></i> Users
+                <span class="badge" id="userBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Prayer Requests</span>
+                <span class="page-subtitle">Submit and manage prayer requests</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openAddPrayerModal()">
+                <i class="fas fa-plus"></i> Submit Request
+            </button>
+            <div style="display:flex;gap:8px;flex:1;max-width:400px;">
+                <input type="text" id="prayerSearch" placeholder="Search requests..." oninput="renderPrayers()" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+                <select id="prayerStatusFilter" onchange="renderPrayers()" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="answered">Answered</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card" style="grid-column:1/-1;">
+                <div class="card-header">
+                    <h3><i class="fas fa-pray"></i> Prayer Wall</h3>
+                    <span style="font-size:0.85rem;color:var(--text-secondary);">Total: <span id="prayerTotal">0</span></span>
+                </div>
+                <div id="prayersList" class="item-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- Add Prayer Modal -->
+    <div class="modal-overlay" id="prayerModal">
+        <div class="modal">
+            <h2>Submit Prayer Request</h2>
+            <form id="prayerForm">
+                <input type="hidden" id="prayerId">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="prayerName" required>
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="prayerTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Request</label>
+                    <textarea id="prayerDescription" rows="4" required placeholder="Describe your prayer request..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="prayerStatus">
+                        <option value="active">Active</option>
+                        <option value="answered">Answered</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assign To (comma separated names)</label>
+                    <input type="text" id="prayerAssign" placeholder="e.g., Pastor John, Sarah">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('prayerModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // RENDER PRAYERS
+        // ============================================
+        function renderPrayers() {
+            var search = document.getElementById('prayerSearch').value.toLowerCase();
+            var statusFilter = document.getElementById('prayerStatusFilter').value;
+
+            var prayers = DB.getAll('prayerRequests');
+
+            if (search) {
+                prayers = prayers.filter(function(p) {
+                    return p.title.toLowerCase().includes(search) ||
+                        p.memberName.toLowerCase().includes(search) ||
+                        p.description.toLowerCase().includes(search);
+                });
+            }
+            if (statusFilter !== 'all') {
+                prayers = prayers.filter(function(p) { return p.status === statusFilter; });
+            }
+
+            document.getElementById('prayerTotal').textContent = prayers.length;
+            document.getElementById('prayerBadge').textContent = DB.getAll('prayerRequests').filter(function(p) { return p.status === 'active'; }).length;
+
+            var list = document.getElementById('prayersList');
+
+            if (prayers.length === 0) {
+                list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);">No prayer requests found</div>';
+                return;
+            }
+
+            list.innerHTML = prayers.map(function(p) {
+                var statusColor = p.status === 'active' ? 'active' : p.status === 'answered' ? 'completed' : 'pending';
+                var assigned = p.assignedTo ? p.assignedTo.join(', ') : 'Not assigned';
+
+                return `
+                    <div class="item">
+                        <div class="item-icon"><i class="fas fa-pray"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${p.title}</div>
+                            <div class="item-meta">${p.memberName} · ${formatDate(p.createdAt)} · Assigned: ${assigned}</div>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">${p.description}</div>
+                            ${p.answeredDate ? '<div style="font-size:0.85rem;color:var(--success);">Answered on: ' + formatDate(p.answeredDate) + '</div>' : ''}
+                        </div>
+                        <span class="item-status ${statusColor}">${p.status}</span>
+                        <div style="display:flex;gap:4px;flex-direction:column;">
+                            <button class="btn-sm" onclick="editPrayer('${p.id}')">Edit</button>
+                            <button class="btn-sm" onclick="markAnswered('${p.id}')" style="color:var(--success);">Answered</button>
+                            <button class="btn-sm" onclick="deletePrayer('${p.id}')" style="color:var(--danger);">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ADD/EDIT PRAYER
+        // ============================================
+        function openAddPrayerModal() {
+            document.getElementById('prayerForm').reset();
+            document.getElementById('prayerId').value = '';
+            document.getElementById('prayerModal').classList.add('active');
+        }
+
+        function editPrayer(id) {
+            var prayer = DB.get('prayerRequests', id);
+            if (!prayer) return;
+
+            document.getElementById('prayerId').value = prayer.id;
+            document.getElementById('prayerName').value = prayer.memberName || '';
+            document.getElementById('prayerTitle').value = prayer.title || '';
+            document.getElementById('prayerDescription').value = prayer.description || '';
+            document.getElementById('prayerStatus').value = prayer.status || 'active';
+            document.getElementById('prayerAssign').value = prayer.assignedTo ? prayer.assignedTo.join(', ') : '';
+            document.getElementById('prayerModal').classList.add('active');
+        }
+
+        function markAnswered(id) {
+            if (confirm('Mark this prayer as answered?')) {
+                DB.update('prayerRequests', id, {
+                    status: 'answered',
+                    answeredDate: new Date().toISOString()
+                });
+                renderPrayers();
+                showToast('Prayer marked as answered', 'success');
+            }
+        }
+
+        document.getElementById('prayerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var id = document.getElementById('prayerId').value;
+            var assigned = document.getElementById('prayerAssign').value.trim();
+
+            var data = {
+                memberName: document.getElementById('prayerName').value.trim(),
+                title: document.getElementById('prayerTitle').value.trim(),
+                description: document.getElementById('prayerDescription').value.trim(),
+                status: document.getElementById('prayerStatus').value,
+                assignedTo: assigned ? assigned.split(',').map(function(s) { return s.trim(); }) : []
+            };
+
+            if (id) {
+                DB.update('prayerRequests', id, data);
+                showToast('Prayer request updated', 'success');
+            } else {
+                DB.add('prayerRequests', data);
+                showToast('Prayer request submitted', 'success');
+            }
+
+            closeModal('prayerModal');
+            renderPrayers();
+        });
+
+        // ============================================
+        // DELETE PRAYER
+        // ============================================
+        function deletePrayer(id) {
+            if (confirm('Delete this prayer request?')) {
+                DB.delete('prayerRequests', id);
+                renderPrayers();
+                showToast('Prayer request deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPrayers();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('prayerBadge').textContent = DB.getAll('prayerRequests').filter(function(p) { return p.status === 'active'; }).length;
+            document.getElementById('pledgeBadge').textContent = DB.getAll('pledges').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('userBadge').textContent = DB.getAll('users').length;
+        });
+    </script>
+</body>
+</html>

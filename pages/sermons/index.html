@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sermons - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <style>
+        .series-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .series-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .series-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        .series-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .series-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 4px 0;
+        }
+        .series-progress {
+            height: 6px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .series-progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+        .audio-player {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-top: 8px;
+        }
+        .audio-info {
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        @media (max-width: 480px) {
+            .series-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+                <i class="fas fa-download"></i>
+                <span class="install-label">Install</span>
+            </button>
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" onclick="installApp()">
+        <i class="fas fa-download"></i>
+        <span style="margin:0 8px;">Install Victory Life CMS on your device</span>
+        <button>Install Now</button>
+        <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="sermons" onclick="window.location.href='index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Sermons</span>
+                <span class="page-subtitle">Manage sermons and series</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openAddSermonModal()">
+                <i class="fas fa-plus"></i> Add Sermon
+            </button>
+            <button class="btn-secondary" onclick="document.getElementById('sermonSearch').value='';renderSermons()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h3><i class="fas fa-layer-group"></i> Sermon Series</h3>
+            </div>
+            <div id="seriesContainer"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-bible"></i> Sermon Library</h3>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Total: <span id="sermonTotal">0</span></span>
+            </div>
+            <div id="sermonsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- Add/Edit Sermon Modal -->
+    <div class="modal-overlay" id="sermonModal">
+        <div class="modal" style="max-width:600px;">
+            <h2 id="sermonModalTitle">Add Sermon</h2>
+            <form id="sermonForm">
+                <input type="hidden" id="sermonId">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="sermonTitle" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Series</label>
+                        <input type="text" id="sermonSeries" placeholder="e.g., Book of Hebrews">
+                    </div>
+                    <div class="form-group">
+                        <label>Preacher</label>
+                        <input type="text" id="sermonPreacher" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="sermonDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Duration</label>
+                        <input type="text" id="sermonDuration" placeholder="e.g., 45:00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Scripture Reference</label>
+                    <input type="text" id="sermonScripture" placeholder="e.g., Hebrews 11:1">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="sermonDescription" rows="2" placeholder="Sermon description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Sermon Notes</label>
+                    <textarea id="sermonNotes" rows="3" placeholder="Sermon notes..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="sermonStatus">
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="scheduled">Scheduled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Audio File</label>
+                        <input type="file" id="sermonAudio" accept="audio/*">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('sermonModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Sermon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/modules/sermons.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // RENDER SERMONS
+        // ============================================
+        function renderSermons() {
+            const sermons = DB.getAll('sermons');
+            const grid = document.getElementById('sermonsGrid');
+            const total = document.getElementById('sermonTotal');
+
+            if (total) total.textContent = sermons.length;
+            document.getElementById('sermonBadge').textContent = sermons.length;
+
+            // Render series
+            const seriesContainer = document.getElementById('seriesContainer');
+            if (seriesContainer) {
+                SermonsModule.renderSeries(seriesContainer);
+            }
+
+            if (sermons.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);"><i class="fas fa-bible" style="font-size:2rem;display:block;margin-bottom:12px;"></i>No sermons found</div>';
+                return;
+            }
+
+            grid.innerHTML = sermons.map(function(s) {
+                const statusColor = s.status === 'published' ? 'active' : s.status === 'draft' ? 'pending' : 'completed';
+
+                let audioHtml = '';
+                if (s.audioUrl) {
+                    audioHtml = `
+                        <div class="audio-player">
+                            <audio controls style="width:100%;">
+                                <source src="${s.audioUrl}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="card">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <div>
+                                <h3 style="font-size:1.1rem;">${s.title}</h3>
+                                ${s.series ? '<span style="font-size:0.8rem;color:var(--text-secondary);">Series: ' + s.series + '</span>' : ''}
+                            </div>
+                            <span class="item-status ${statusColor}">${s.status}</span>
+                        </div>
+                        <p style="font-size:0.9rem;color:var(--text-secondary);margin:8px 0;">${s.description || 'No description'}</p>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);">
+                            <div><i class="fas fa-user"></i> ${s.preacher}</div>
+                            <div><i class="fas fa-calendar"></i> ${formatDate(s.date)}</div>
+                            ${s.scripture ? '<div><i class="fas fa-book"></i> ' + s.scripture + '</div>' : ''}
+                            ${s.duration ? '<div><i class="fas fa-clock"></i> ' + s.duration + '</div>' : ''}
+                        </div>
+                        ${audioHtml}
+                        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn-sm" onclick="editSermon('${s.id}')">Edit</button>
+                            <button class="btn-sm" onclick="deleteSermon('${s.id}')" style="color:var(--danger);">Delete</button>
+                            ${!s.audioUrl ? `<button class="btn-sm" onclick="document.getElementById('audioUpload_${s.id}').click()" style="color:var(--primary);">Upload Audio</button>
+                            <input type="file" id="audioUpload_${s.id}" accept="audio/*" style="display:none;" onchange="SermonsModule.uploadAudio(event, '${s.id}')">` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ADD/EDIT SERMON
+        // ============================================
+        function openAddSermonModal() {
+            document.getElementById('sermonModalTitle').textContent = 'Add Sermon';
+            document.getElementById('sermonForm').reset();
+            document.getElementById('sermonId').value = '';
+            document.getElementById('sermonDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('sermonModal').classList.add('active');
+        }
+
+        function editSermon(id) {
+            const sermon = DB.get('sermons', id);
+            if (!sermon) return;
+
+            document.getElementById('sermonModalTitle').textContent = 'Edit Sermon';
+            document.getElementById('sermonId').value = sermon.id;
+            document.getElementById('sermonTitle').value = sermon.title || '';
+            document.getElementById('sermonSeries').value = sermon.series || '';
+            document.getElementById('sermonPreacher').value = sermon.preacher || '';
+            document.getElementById('sermonDate').value = sermon.date || '';
+            document.getElementById('sermonDuration').value = sermon.duration || '';
+            document.getElementById('sermonScripture').value = sermon.scripture || '';
+            document.getElementById('sermonDescription').value = sermon.description || '';
+            document.getElementById('sermonNotes').value = sermon.notes || '';
+            document.getElementById('sermonStatus').value = sermon.status || 'published';
+            document.getElementById('sermonModal').classList.add('active');
+        }
+
+        document.getElementById('sermonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('sermonId').value;
+            const data = {
+                title: document.getElementById('sermonTitle').value.trim(),
+                series: document.getElementById('sermonSeries').value.trim(),
+                preacher: document.getElementById('sermonPreacher').value.trim(),
+                date: document.getElementById('sermonDate').value,
+                duration: document.getElementById('sermonDuration').value.trim(),
+                scripture: document.getElementById('sermonScripture').value.trim(),
+                description: document.getElementById('sermonDescription').value.trim(),
+                notes: document.getElementById('sermonNotes').value.trim(),
+                status: document.getElementById('sermonStatus').value
+            };
+
+            if (id) {
+                DB.update('sermons', id, data);
+                showToast('Sermon updated successfully', 'success');
+            } else {
+                DB.add('sermons', data);
+                showToast('Sermon added successfully', 'success');
+            }
+
+            closeModal('sermonModal');
+            renderSermons();
+        });
+
+        // ============================================
+        // DELETE SERMON
+        // ============================================
+        function deleteSermon(id) {
+            if (confirm('Delete this sermon?')) {
+                DB.delete('sermons', id);
+                renderSermons();
+                showToast('Sermon deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        (function() {
+            if (!isAuthenticated()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+            updateSidebarUser();
+
+            renderSermons();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+        })();
+    </script>
+</body>
+</html>

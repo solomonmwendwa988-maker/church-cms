@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Analytics - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <style>
+        .analytics-dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .insight-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+            transition: all var(--transition);
+            cursor: default;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .insight-card .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .insight-card .insight-header i {
+            font-size: 1.2rem;
+        }
+
+        .insight-card .insight-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .insight-card .insight-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .insight-card .insight-recommendation {
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            border-left: 3px solid var(--primary);
+        }
+
+        .chart-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .chart-container canvas {
+            max-height: 300px;
+            max-width: 100%;
+        }
+
+        .stats-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-mini {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            text-align: center;
+        }
+
+        .stat-mini .stat-mini-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-mini .stat-mini-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .ai-badge {
+            background: var(--primary);
+            color: white;
+            font-size: 0.55rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 768px) {
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-mini-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-container canvas {
+                max-height: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-mini-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+                <i class="fas fa-download"></i>
+                <span class="install-label">Install</span>
+            </button>
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" onclick="installApp()">
+        <i class="fas fa-download"></i>
+        <span style="margin:0 8px;">Install Victory Life CMS on your device</span>
+        <button>Install Now</button>
+        <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="analytics" onclick="window.location.href='index.html'">
+                <i class="fas fa-chart-line"></i> Analytics
+                <span class="ai-badge">AI</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar" id="userAvatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name" id="userName">Admin User</span>
+                    <span class="user-role" id="userRole">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title" id="pageTitle">Analytics</span>
+                <span class="page-subtitle">AI-powered insights and advanced analytics</span>
+            </div>
+        </div>
+
+        <div class="analytics-dashboard">
+
+            <!-- AI Insights Section -->
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h3 style="font-size:1.1rem;"><i class="fas fa-robot" style="color:var(--primary);"></i> AI Insights</h3>
+                    <button class="btn-sm" onclick="refreshAnalytics()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div id="insightsContainer" class="insights-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h3 style="font-size:1.1rem;"><i class="fas fa-tachometer-alt" style="color:var(--primary);"></i> Key Metrics</h3>
+                </div>
+                <div id="metricsContainer" class="stats-mini-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div class="chart-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="font-size:0.95rem;">Member Growth</h4>
+                        <select id="growthPeriod" onchange="renderCharts()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.75rem;">
+                            <option value="90">3 Months</option>
+                            <option value="180">6 Months</option>
+                            <option value="365" selected>1 Year</option>
+                        </select>
+                    </div>
+                    <canvas id="growthChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="font-size:0.95rem;">Giving Trends</h4>
+                        <select id="givingPeriod" onchange="renderCharts()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.75rem;">
+                            <option value="90">3 Months</option>
+                            <option value="180">6 Months</option>
+                            <option value="365" selected>1 Year</option>
+                        </select>
+                    </div>
+                    <canvas id="givingChart"></canvas>
+                </div>
+
+                <div class="chart-container" style="grid-column:1/-1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="font-size:0.95rem;">Attendance Trends</h4>
+                        <select id="attendancePeriod" onchange="renderCharts()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.75rem;">
+                            <option value="30">1 Month</option>
+                            <option value="90" selected>3 Months</option>
+                            <option value="180">6 Months</option>
+                        </select>
+                    </div>
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Demographics Section -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div class="chart-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="font-size:0.95rem;">Member Demographics</h4>
+                    </div>
+                    <canvas id="demographicsChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="font-size:0.95rem;">Giving by Category</h4>
+                    </div>
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Predictions -->
+            <div class="chart-container">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="font-size:0.95rem;"><i class="fas fa-robot" style="color:var(--primary);"></i> AI Predictions</h4>
+                </div>
+                <div id="predictionsContainer">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/modules/analytics.js"></script>
+    <script src="../../assets/js/app.js"></script>
+
+    <script>
+        let growthChartInstance = null;
+        let givingChartInstance = null;
+        let attendanceChartInstance = null;
+        let demographicsChartInstance = null;
+        let categoryChartInstance = null;
+
+        // ============================================
+        // RENDER AI INSIGHTS
+        // ============================================
+        function renderInsights() {
+            const container = document.getElementById('insightsContainer');
+            const insights = Analytics.getAIInsights();
+
+            if (insights.length === 0) {
+                container.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text-muted);">No insights available</div>';
+                return;
+            }
+
+            container.innerHTML = insights.map(function(insight) {
+                return `
+                    <div class="insight-card" style="border-left-color:${insight.color || 'var(--primary)'};">
+                        <div class="insight-header">
+                            <i class="fas ${insight.icon}" style="color:${insight.color || 'var(--primary)'};"></i>
+                            <span class="insight-title">${insight.title}</span>
+                            <span class="ai-badge" style="margin-left:auto;">AI</span>
+                        </div>
+                        <div class="insight-description">${insight.description}</div>
+                        <div class="insight-recommendation">
+                            <i class="fas fa-lightbulb" style="margin-right:6px;color:var(--warning);"></i>
+                            ${insight.recommendation}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // RENDER METRICS
+        // ============================================
+        function renderMetrics() {
+            const container = document.getElementById('metricsContainer');
+
+            const members = DB.getAll('members');
+            const giving = DB.getAll('giving');
+            const attendance = DB.getAll('attendance');
+
+            const totalGiving = giving.reduce(function(sum, g) { return sum + (parseFloat(g.amount) || 0); }, 0);
+            const retention = Analytics.getRetentionRate();
+
+            container.innerHTML = `
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${members.length}</div>
+                    <div class="stat-mini-label">Total Members</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${retention.retentionRate}%</div>
+                    <div class="stat-mini-label">Retention Rate</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${formatCurrency(totalGiving)}</div>
+                    <div class="stat-mini-label">Total Giving</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${attendance.length}</div>
+                    <div class="stat-mini-label">Attendance Records</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${giving.length}</div>
+                    <div class="stat-mini-label">Transactions</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value">${members.filter(function(m) { return m.status === 'Active'; }).length}</div>
+                    <div class="stat-mini-label">Active Members</div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // RENDER CHARTS
+        // ============================================
+        function renderCharts() {
+            const growthPeriod = parseInt(document.getElementById('growthPeriod').value) || 365;
+            const givingPeriod = parseInt(document.getElementById('givingPeriod').value) || 365;
+            const attendancePeriod = parseInt(document.getElementById('attendancePeriod').value) || 90;
+
+            // Growth Chart
+            const growthData = Analytics.getMemberGrowthChartData(growthPeriod);
+            const growthCtx = document.getElementById('growthChart').getContext('2d');
+
+            if (growthChartInstance) growthChartInstance.destroy();
+            growthChartInstance = new Chart(growthCtx, {
+                type: 'bar',
+                data: {
+                    labels: growthData.labels,
+                    datasets: [
+                        {
+                            label: 'Total Members',
+                            data: growthData.datasets.members,
+                            backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                            borderColor: 'rgba(37, 99, 235, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'New Members',
+                            data: growthData.datasets.new,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Giving Chart
+            const givingData = Analytics.getGivingChartData(givingPeriod);
+            const givingCtx = document.getElementById('givingChart').getContext('2d');
+
+            if (givingChartInstance) givingChartInstance.destroy();
+            givingChartInstance = new Chart(givingCtx, {
+                type: 'line',
+                data: {
+                    labels: givingData.labels,
+                    datasets: [
+                        {
+                            label: 'Giving Amount',
+                            data: givingData.datasets.amount,
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderColor: 'rgba(37, 99, 235, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return formatCurrency(value); }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Attendance Chart
+            const attendanceData = Analytics.getAttendanceChartData(attendancePeriod);
+            const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+
+            if (attendanceChartInstance) attendanceChartInstance.destroy();
+            attendanceChartInstance = new Chart(attendanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: attendanceData.labels,
+                    datasets: [
+                        {
+                            label: 'Present',
+                            data: attendanceData.datasets.present,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Absent',
+                            data: attendanceData.datasets.absent,
+                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Late',
+                            data: attendanceData.datasets.late,
+                            backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Demographics Chart
+            const demographics = Analytics.getDemographics();
+            const demoCtx = document.getElementById('demographicsChart').getContext('2d');
+
+            if (demographicsChartInstance) demographicsChartInstance.destroy();
+            demographicsChartInstance = new Chart(demoCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(demographics.status),
+                    datasets: [{
+                        data: Object.values(demographics.status),
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: 'var(--surface)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    }
+                }
+            });
+
+            // Category Chart
+            const categories = Analytics.getGivingByCategory();
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+
+            if (categoryChartInstance) categoryChartInstance.destroy();
+            const catColors = ['#2563eb', '#22c55e', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899'];
+            categoryChartInstance = new Chart(catCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories).map(function(c) { return c.amount; }),
+                        backgroundColor: catColors.slice(0, Object.keys(categories).length),
+                        borderWidth: 2,
+                        borderColor: 'var(--surface)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    }
+                }
+            });
+
+            // Render predictions
+            renderPredictions();
+        }
+
+        // ============================================
+        // RENDER PREDICTIONS
+        // ============================================
+        function renderPredictions() {
+            const container = document.getElementById('predictionsContainer');
+
+            const givingForecast = Analytics.predictGiving(3);
+            const churnRisk = Analytics.predictChurnRisk();
+
+            const confidenceColors = {
+                high: 'var(--success)',
+                medium: 'var(--warning)',
+                low: 'var(--danger)'
+            };
+
+            container.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div style="padding:16px;background:var(--bg);border-radius:var(--radius-sm);">
+                        <div style="font-weight:600;font-size:0.9rem;margin-bottom:8px;">
+                            <i class="fas fa-chart-line" style="color:var(--primary);"></i> Giving Forecast
+                            <span class="ai-badge" style="margin-left:8px;">AI</span>
+                        </div>
+                        <div style="font-size:1.2rem;font-weight:700;color:${givingForecast.trend === 'upward' ? 'var(--success)' : (givingForecast.trend === 'downward' ? 'var(--danger)' : 'var(--warning)')};">
+                            ${formatCurrency(givingForecast.prediction)}
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">
+                            Predicted for next ${givingForecast.months} months
+                            <span style="display:inline-block;margin-left:8px;padding:1px 8px;border-radius:20px;font-size:0.6rem;font-weight:600;background:${confidenceColors[givingForecast.confidence]};color:white;">
+                                ${givingForecast.confidence.toUpperCase()} confidence
+                            </span>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">
+                            Current: ${formatCurrency(givingForecast.current)} · Trend: ${givingForecast.trend}
+                        </div>
+                    </div>
+                    <div style="padding:16px;background:var(--bg);border-radius:var(--radius-sm);">
+                        <div style="font-weight:600;font-size:0.9rem;margin-bottom:8px;">
+                            <i class="fas fa-users-slash" style="color:var(--danger);"></i> Churn Risk Prediction
+                            <span class="ai-badge" style="margin-left:8px;">AI</span>
+                        </div>
+                        <div style="font-size:1.2rem;font-weight:700;color:${churnRisk > 20 ? 'var(--danger)' : (churnRisk > 10 ? 'var(--warning)' : 'var(--success)')};">
+                            ${churnRisk}%
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">
+                            Members at risk of leaving
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">
+                            ${churnRisk > 20 ? 'Action recommended: Reach out to inactive members' : (churnRisk > 10 ? 'Monitor at-risk members closely' : 'Churn risk is low. Keep up the good work!')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // REFRESH ANALYTICS
+        // ============================================
+        function refreshAnalytics() {
+            renderInsights();
+            renderMetrics();
+            renderCharts();
+            showToast('Analytics refreshed', 'success');
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        (function() {
+            if (!isAuthenticated()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+            updateSidebarUser();
+
+            renderInsights();
+            renderMetrics();
+            renderCharts();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="prayer" onclick="window.location.href='../prayer/index.html'">
+                <i class="fas fa-pray"></i> Prayer
+                <span class="badge" id="prayerBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="budget" onclick="window.location.href='index.html'">
+                <i class="fas fa-chart-pie"></i> Budget
+            </button>
+            <button class="nav-item" data-page="pledges" onclick="window.location.href='../pledges/index.html'">
+                <i class="fas fa-handshake"></i> Pledges
+                <span class="badge" id="pledgeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="users" onclick="window.location.href='../users/index.html'">
+                <i class="fas fa-user-cog"></i> Users
+                <span class="badge" id="userBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Budget Management</span>
+                <span class="page-subtitle">Plan and track church budget</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openAddBudgetModal()">
+                <i class="fas fa-plus"></i> Add Budget Category
+            </button>
+            <button class="btn-secondary" onclick="renderBudgets()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-chart-pie"></i> Budget Overview</h3>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Total Allocated: <span id="totalAllocated">0</span></span>
+            </div>
+            <div id="budgetsList">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- Add/Edit Budget Modal -->
+    <div class="modal-overlay" id="budgetModal">
+        <div class="modal">
+            <h2 id="budgetModalTitle">Add Budget Category</h2>
+            <form id="budgetForm">
+                <input type="hidden" id="budgetId">
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" id="budgetCategory" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Allocated Amount</label>
+                        <input type="number" step="0.01" id="budgetAllocated" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Spent Amount</label>
+                        <input type="number" step="0.01" id="budgetSpent" value="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Period (e.g., 2024-07)</label>
+                    <input type="month" id="budgetPeriod" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="budgetNotes"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('budgetModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Budget</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // RENDER BUDGETS
+        // ============================================
+        function renderBudgets() {
+            var budgets = DB.getAll('budgets');
+            var container = document.getElementById('budgetsList');
+
+            var totalAllocated = budgets.reduce(function(sum, b) { return sum + (parseFloat(b.allocated) || 0); }, 0);
+            document.getElementById('totalAllocated').textContent = formatCurrency(totalAllocated);
+
+            if (budgets.length === 0) {
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);">No budget categories found</div>';
+                return;
+            }
+
+            container.innerHTML = budgets.map(function(b) {
+                var allocated = parseFloat(b.allocated) || 0;
+                var spent = parseFloat(b.spent) || 0;
+                var remaining = allocated - spent;
+                var percentage = allocated > 0 ? Math.round((spent / allocated) * 100) : 0;
+                var color = percentage > 90 ? 'var(--danger)' : percentage > 70 ? 'var(--warning)' : 'var(--success)';
+
+                return `
+                    <div style="padding:16px;border-bottom:1px solid var(--border);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <strong style="font-size:1rem;">${b.category}</strong>
+                                <span style="font-size:0.85rem;color:var(--text-secondary);margin-left:12px;">${b.period || 'N/A'}</span>
+                            </div>
+                            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                                <span style="font-size:0.85rem;">Allocated: ${formatCurrency(allocated)}</span>
+                                <span style="font-size:0.85rem;color:var(--danger);">Spent: ${formatCurrency(spent)}</span>
+                                <span style="font-size:0.85rem;color:var(--success);">Remaining: ${formatCurrency(remaining)}</span>
+                                <span style="font-size:0.85rem;font-weight:600;color:${color};">${percentage}%</span>
+                                <button class="btn-sm" onclick="editBudget('${b.id}')">Edit</button>
+                                <button class="btn-sm" onclick="deleteBudget('${b.id}')" style="color:var(--danger);">Delete</button>
+                            </div>
+                        </div>
+                        <div style="margin-top:6px;height:6px;background:var(--border);border-radius:10px;overflow:hidden;">
+                            <div style="height:100%;width:${Math.min(percentage, 100)}%;background:${color};border-radius:10px;transition:width 0.6s;"></div>
+                        </div>
+                        ${b.notes ? '<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">' + b.notes + '</div>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ADD/EDIT BUDGET
+        // ============================================
+        function openAddBudgetModal() {
+            document.getElementById('budgetModalTitle').textContent = 'Add Budget Category';
+            document.getElementById('budgetForm').reset();
+            document.getElementById('budgetId').value = '';
+            document.getElementById('budgetPeriod').value = new Date().toISOString().slice(0, 7);
+            document.getElementById('budgetModal').classList.add('active');
+        }
+
+        function editBudget(id) {
+            var budget = DB.get('budgets', id);
+            if (!budget) return;
+
+            document.getElementById('budgetModalTitle').textContent = 'Edit Budget';
+            document.getElementById('budgetId').value = budget.id;
+            document.getElementById('budgetCategory').value = budget.category || '';
+            document.getElementById('budgetAllocated').value = budget.allocated || '';
+            document.getElementById('budgetSpent').value = budget.spent || 0;
+            document.getElementById('budgetPeriod').value = budget.period || '';
+            document.getElementById('budgetNotes').value = budget.notes || '';
+            document.getElementById('budgetModal').classList.add('active');
+        }
+
+        document.getElementById('budgetForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var id = document.getElementById('budgetId').value;
+            var data = {
+                category: document.getElementById('budgetCategory').value.trim(),
+                allocated: parseFloat(document.getElementById('budgetAllocated').value) || 0,
+                spent: parseFloat(document.getElementById('budgetSpent').value) || 0,
+                period: document.getElementById('budgetPeriod').value,
+                notes: document.getElementById('budgetNotes').value.trim()
+            };
+
+            if (id) {
+                DB.update('budgets', id, data);
+                showToast('Budget updated successfully', 'success');
+            } else {
+                DB.add('budgets', data);
+                showToast('Budget added successfully', 'success');
+            }
+
+            closeModal('budgetModal');
+            renderBudgets();
+        });
+
+        // ============================================
+        // DELETE BUDGET
+        // ============================================
+        function deleteBudget(id) {
+            if (confirm('Delete this budget category?')) {
+                DB.delete('budgets', id);
+                renderBudgets();
+                showToast('Budget deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderBudgets();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('prayerBadge').textContent = DB.getAll('prayerRequests').filter(function(p) { return p.status === 'active'; }).length;
+            document.getElementById('pledgeBadge').textContent = DB.getAll('pledges').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('userBadge').textContent = DB.getAll('users').length;
+        });
+    </script>
+</body>
+</html>

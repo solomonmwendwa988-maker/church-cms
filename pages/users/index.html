@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="prayer" onclick="window.location.href='../prayer/index.html'">
+                <i class="fas fa-pray"></i> Prayer
+                <span class="badge" id="prayerBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="budget" onclick="window.location.href='../budget/index.html'">
+                <i class="fas fa-chart-pie"></i> Budget
+            </button>
+            <button class="nav-item" data-page="pledges" onclick="window.location.href='../pledges/index.html'">
+                <i class="fas fa-handshake"></i> Pledges
+                <span class="badge" id="pledgeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="users" onclick="window.location.href='index.html'">
+                <i class="fas fa-user-cog"></i> Users
+                <span class="badge" id="userBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar" id="headerAvatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name" id="headerUserName">Admin User</span>
+                    <span class="user-role" id="headerUserRole">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">User Management</span>
+                <span class="page-subtitle">Manage system users and permissions</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <button class="btn-primary" onclick="openAddUserModal()">
+                <i class="fas fa-plus"></i> Add User
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-users-cog"></i> System Users</h3>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Total: <span id="userTotal">0</span></span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal">
+            <h2>Add New User</h2>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="userName" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" required placeholder="john@church.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="userPassword" required placeholder="Min 8 characters">
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="userRole">
+                        <option value="admin">Admin</option>
+                        <option value="pastor">Pastor</option>
+                        <option value="secretary">Secretary</option>
+                        <option value="cashier">Cashier</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="userStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal">
+            <h2>Edit User</h2>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="editUserName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editUserEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="editUserRole">
+                        <option value="admin">Admin</option>
+                        <option value="pastor">Pastor</option>
+                        <option value="secretary">Secretary</option>
+                        <option value="cashier">Cashier</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editUserStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>New Password (leave blank to keep current)</label>
+                    <input type="password" id="editUserPassword" placeholder="Enter new password">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // RENDER USERS
+        // ============================================
+        function renderUsers() {
+            var users = DB.getAll('users');
+            var table = document.getElementById('usersTable');
+
+            document.getElementById('userTotal').textContent = users.length;
+            document.getElementById('userBadge').textContent = users.length;
+
+            if (users.length === 0) {
+                table.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No users found</td></tr>';
+                return;
+            }
+
+            var roleColors = {
+                admin: 'var(--danger)',
+                pastor: 'var(--primary)',
+                secretary: 'var(--warning)',
+                cashier: 'var(--success)'
+            };
+
+            table.innerHTML = users.map(function(u) {
+                return `
+                    <tr>
+                        <td><strong>${u.name}</strong></td>
+                        <td>${u.email}</td>
+                        <td><span style="color:${roleColors[u.role] || 'var(--text-secondary)'};font-weight:600;text-transform:capitalize;">${u.role}</span></td>
+                        <td><span class="item-status ${u.status === 'active' ? 'active' : 'pending'}">${u.status}</span></td>
+                        <td>
+                            <button class="btn-sm" onclick="editUser('${u.id}')">Edit</button>
+                            <button class="btn-sm" onclick="deleteUser('${u.id}')" style="color:var(--danger);">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ADD USER
+        // ============================================
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var name = document.getElementById('userName').value.trim();
+            var email = document.getElementById('userEmail').value.trim();
+            var password = document.getElementById('userPassword').value.trim();
+            var role = document.getElementById('userRole').value;
+            var status = document.getElementById('userStatus').value;
+
+            if (!name || !email || !password) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            if (password.length < 8) {
+                showToast('Password must be at least 8 characters', 'error');
+                return;
+            }
+
+            var users = DB.getAll('users');
+            if (users.some(function(u) { return u.email === email; })) {
+                showToast('Email already exists', 'error');
+                return;
+            }
+
+            DB.add('users', {
+                name: name,
+                email: email,
+                password: password,
+                role: role,
+                status: status,
+                avatar: name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase()
+            });
+
+            closeModal('addUserModal');
+            document.getElementById('addUserForm').reset();
+            renderUsers();
+            showToast('User added successfully', 'success');
+        });
+
+        // ============================================
+        // EDIT USER
+        // ============================================
+        function editUser(id) {
+            var user = DB.get('users', id);
+            if (!user) return;
+
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUserName').value = user.name;
+            document.getElementById('editUserEmail').value = user.email;
+            document.getElementById('editUserRole').value = user.role;
+            document.getElementById('editUserStatus').value = user.status;
+            document.getElementById('editUserPassword').value = '';
+
+            document.getElementById('editUserModal').classList.add('active');
+        }
+
+        document.getElementById('editUserForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var id = document.getElementById('editUserId').value;
+            var name = document.getElementById('editUserName').value.trim();
+            var email = document.getElementById('editUserEmail').value.trim();
+            var role = document.getElementById('editUserRole').value;
+            var status = document.getElementById('editUserStatus').value;
+            var password = document.getElementById('editUserPassword').value.trim();
+
+            if (!name || !email) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            var updates = {
+                name: name,
+                email: email,
+                role: role,
+                status: status
+            };
+
+            if (password) {
+                updates.password = password;
+            }
+
+            DB.update('users', id, updates);
+            closeModal('editUserModal');
+            renderUsers();
+            showToast('User updated successfully', 'success');
+        });
+
+        // ============================================
+        // DELETE USER
+        // ============================================
+        function deleteUser(id) {
+            if (confirm('Delete this user?')) {
+                DB.delete('users', id);
+                renderUsers();
+                showToast('User deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // UPDATE SIDEBAR USER
+        // ============================================
+        function updateSidebarUser() {
+            var users = DB.getAll('users');
+            var currentUser = users[0] || { name: 'Admin User', role: 'admin', avatar: 'AD' };
+            document.getElementById('headerAvatar').textContent = currentUser.avatar || 'AD';
+            document.getElementById('headerUserName').textContent = currentUser.name || 'Admin User';
+            document.getElementById('headerUserRole').textContent = currentUser.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'Administrator';
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderUsers();
+            updateSidebarUser();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('prayerBadge').textContent = DB.getAll('prayerRequests').filter(function(p) { return p.status === 'active'; }).length;
+            document.getElementById('pledgeBadge').textContent = DB.getAll('pledges').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('userBadge').textContent = DB.getAll('users').length;
+        });
+    </script>
+</body>
+</html>

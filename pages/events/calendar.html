@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calendar - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <style>
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .calendar-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-weekday {
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            padding: 8px 4px;
+        }
+        .calendar-day {
+            min-height: 80px;
+            background: var(--surface2);
+            border-radius: 6px;
+            padding: 4px;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+        }
+        .calendar-day:hover {
+            background: var(--border);
+            transform: scale(1.02);
+        }
+        .calendar-day.empty {
+            background: transparent;
+            cursor: default;
+        }
+        .calendar-day.today {
+            border: 2px solid var(--primary);
+        }
+        .calendar-day .day-number {
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: block;
+            padding: 2px 4px;
+        }
+        .day-events {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            margin-top: 2px;
+        }
+        .day-event-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .day-event-more {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            padding-left: 2px;
+        }
+        .event-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--bg);
+            border-left: 3px solid var(--primary);
+            font-size: 0.8rem;
+        }
+        .category-item i {
+            font-size: 0.7rem;
+        }
+        @media (max-width: 768px) {
+            .calendar-day {
+                min-height: 60px;
+                font-size: 0.75rem;
+            }
+            .calendar-day .day-number {
+                font-size: 0.7rem;
+            }
+            .day-event-dot {
+                width: 6px;
+                height: 6px;
+            }
+        }
+        @media (max-width: 480px) {
+            .calendar-day {
+                min-height: 50px;
+                padding: 2px;
+            }
+            .calendar-weekday {
+                font-size: 0.6rem;
+                padding: 4px 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+                <i class="fas fa-download"></i>
+                <span class="install-label">Install</span>
+            </button>
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" onclick="installApp()">
+        <i class="fas fa-download"></i>
+        <span style="margin:0 8px;">Install Victory Life CMS on your device</span>
+        <button>Install Now</button>
+        <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="events" onclick="window.location.href='index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Event Calendar</span>
+                <span class="page-subtitle">Monthly calendar view</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-calendar-alt"></i> Calendar</h3>
+                <a href="index.html" class="btn-sm"><i class="fas fa-arrow-left"></i> Back to Events</a>
+            </div>
+            <div id="calendarContainer"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+            <div class="card-header">
+                <h3><i class="fas fa-tags"></i> Event Categories</h3>
+            </div>
+            <div id="categoriesContainer" class="event-categories"></div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/modules/events.js"></script>
+    <script src="../../assets/js/app.js"></script>
+
+    <script>
+        (function() {
+            if (!isAuthenticated()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+            updateSidebarUser();
+
+            const calendarContainer = document.getElementById('calendarContainer');
+            if (calendarContainer) {
+                EventsModule.renderCalendar(calendarContainer);
+            }
+
+            const categoriesContainer = document.getElementById('categoriesContainer');
+            if (categoriesContainer) {
+                EventsModule.renderCategories(categoriesContainer);
+            }
+
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+        })();
+    </script>
+</body>
+</html>

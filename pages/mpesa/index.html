@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>M-Pesa - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <style>
+        .mpesa-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .mpesa-status-container {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            margin-top: 16px;
+            border-radius: var(--radius);
+            background: var(--bg);
+        }
+        .mpesa-status-container.active {
+            display: block;
+        }
+        .mpesa-status-container .spinner {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+            color: var(--primary);
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .mpesa-status-container .success-icon {
+            font-size: 3rem;
+            color: var(--success);
+        }
+        .mpesa-status-container .error-icon {
+            font-size: 3rem;
+            color: var(--danger);
+        }
+        .mpesa-type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .mpesa-type-btn {
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            cursor: pointer;
+            transition: all var(--transition);
+            text-align: center;
+        }
+        .mpesa-type-btn:hover {
+            border-color: var(--primary);
+        }
+        .mpesa-type-btn.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .mpesa-type-btn i {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+            color: var(--primary);
+        }
+        .mpesa-type-btn span {
+            font-size: 0.75rem;
+        }
+        @media (max-width: 480px) {
+            .mpesa-type-selector {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+                <i class="fas fa-download"></i>
+                <span class="install-label">Install</span>
+            </button>
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" onclick="installApp()">
+        <i class="fas fa-download"></i>
+        <span style="margin:0 8px;">Install Victory Life CMS on your device</span>
+        <button>Install Now</button>
+        <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="analytics" onclick="window.location.href='../analytics/index.html'">
+                <i class="fas fa-chart-line"></i> Analytics
+                <span class="ai-badge">AI</span>
+            </button>
+            <button class="nav-item active" data-page="mpesa" onclick="window.location.href='index.html'">
+                <i class="fas fa-mobile-alt"></i> M-Pesa
+                <span class="badge" id="mpesaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar" id="userAvatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name" id="userName">Admin User</span>
+                    <span class="user-role" id="userRole">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">M-Pesa Payments</span>
+                <span class="page-subtitle">Send STK Push and manage transactions</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="statsContainer" style="margin-bottom:20px;"></div>
+
+        <!-- Transaction Form -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h3><i class="fas fa-mobile-alt"></i> Send M-Pesa Payment Request</h3>
+            </div>
+            <div class="mpesa-form">
+                <!-- Transaction Type Selector -->
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:500;font-size:0.9rem;display:block;margin-bottom:6px;">Transaction Type</label>
+                    <div id="typeSelector" class="mpesa-type-selector">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <form id="mpesaForm">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="mpesaPhone" placeholder="0712345678" required>
+                        <span style="font-size:0.75rem;color:var(--text-secondary);">Enter Safaricom number</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (KES)</label>
+                        <input type="number" id="mpesaAmount" placeholder="0.00" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <input type="text" id="mpesaDescription" placeholder="e.g., Tithe payment">
+                    </div>
+                    <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:12px;">
+                        <i class="fas fa-paper-plane"></i> Send Payment Request
+                    </button>
+                </form>
+
+                <!-- Status Container -->
+                <div id="mpesaStatus" class="mpesa-status-container">
+                    <div id="mpesaStatusContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction List -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-history"></i> Recent Transactions</h3>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <select id="filterStatus" onchange="renderTransactions()" style="padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.75rem;">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button class="btn-sm" onclick="renderTransactions()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+            </div>
+            <div id="transactionsList" class="item-list">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/modules/mpesa.js"></script>
+    <script src="../../assets/js/app.js"></script>
+
+    <script>
+        let currentType = 'general';
+
+        // ============================================
+        // RENDER TYPE SELECTOR
+        // ============================================
+        function renderTypeSelector() {
+            const container = document.getElementById('typeSelector');
+            container.innerHTML = Mpesa.transactionTypes.map(function(type) {
+                return `
+                    <div class="mpesa-type-btn ${type.id === currentType ? 'active' : ''}" onclick="selectType('${type.id}')">
+                        <i class="fas ${type.icon}"></i>
+                        <span>${type.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectType(type) {
+            currentType = type;
+            document.querySelectorAll('.mpesa-type-btn').forEach(function(el) {
+                el.classList.toggle('active', el.dataset.type === type);
+            });
+            // Update data attribute for styling
+            document.querySelectorAll('.mpesa-type-btn').forEach(function(el) {
+                el.dataset.type = type;
+            });
+            // Re-render with correct active state
+            renderTypeSelector();
+        }
+
+        // ============================================
+        // RENDER STATS
+        // ============================================
+        function renderStats() {
+            const container = document.getElementById('statsContainer');
+            Mpesa.renderStats(container);
+        }
+
+        // ============================================
+        // RENDER TRANSACTIONS
+        // ============================================
+        function renderTransactions() {
+            const container = document.getElementById('transactionsList');
+            const filter = document.getElementById('filterStatus').value;
+
+            let transactions = Mpesa.getTransactions();
+
+            if (filter !== 'all') {
+                transactions = transactions.filter(function(t) { return t.status === filter; });
+            }
+
+            Mpesa.renderTransactionList(container, transactions);
+            document.getElementById('mpesaBadge').textContent = Mpesa.getTransactions().length;
+        }
+
+        // ============================================
+        // HANDLE MPESA PAYMENT
+        // ============================================
+        document.getElementById('mpesaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const phone = document.getElementById('mpesaPhone').value.trim();
+            const amount = parseFloat(document.getElementById('mpesaAmount').value);
+            const description = document.getElementById('mpesaDescription').value.trim();
+
+            if (!phone) {
+                showToast('Please enter a phone number', 'error');
+                return;
+            }
+
+            if (!amount || amount <= 0) {
+                showToast('Please enter a valid amount', 'error');
+                return;
+            }
+
+            // Show processing status
+            const statusContainer = document.getElementById('mpesaStatus');
+            const statusContent = document.getElementById('mpesaStatusContent');
+            statusContainer.classList.add('active');
+            statusContent.innerHTML = `
+                <div class="spinner"><i class="fas fa-spinner"></i></div>
+                <p style="margin-top:12px;font-weight:500;">Processing M-Pesa payment...</p>
+                <p style="font-size:0.85rem;color:var(--text-secondary);">Sending STK Push to ${phone}</p>
+            `;
+
+            // Process payment
+            Mpesa.processPayment(phone, amount, currentType, description)
+                .then(function(result) {
+                    statusContent.innerHTML = `
+                        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                        <h3 style="color:var(--success);">Payment Successful!</h3>
+                        <p style="margin:8px 0;">${result.message}</p>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);">Transaction: ${result.transaction.transactionId}</p>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);">Amount: ${formatCurrency(result.transaction.amount)}</p>
+                        <button class="btn-sm" onclick="clearStatus()" style="margin-top:12px;">Close</button>
+                    `;
+                    showToast('Payment successful!', 'success');
+                    renderTransactions();
+                    renderStats();
+                    document.getElementById('mpesaForm').reset();
+                })
+                .catch(function(error) {
+                    statusContent.innerHTML = `
+                        <div class="error-icon"><i class="fas fa-times-circle"></i></div>
+                        <h3 style="color:var(--danger);">Payment Failed</h3>
+                        <p>${error.message || 'Transaction failed. Please try again.'}</p>
+                        <button class="btn-sm" onclick="clearStatus()" style="margin-top:12px;">Try Again</button>
+                    `;
+                    showToast('Payment failed: ' + (error.message || 'Unknown error'), 'error');
+                });
+        });
+
+        // ============================================
+        // CLEAR STATUS
+        // ============================================
+        function clearStatus() {
+            document.getElementById('mpesaStatus').classList.remove('active');
+            document.getElementById('mpesaStatusContent').innerHTML = '';
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        (function() {
+            if (!isAuthenticated()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+            updateSidebarUser();
+
+            renderTypeSelector();
+            renderStats();
+            renderTransactions();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mpesaBadge').textContent = Mpesa.getTransactions().length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+        })();
+    </script>
+</body>
+</html>

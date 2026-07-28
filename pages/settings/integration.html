@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Integration - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="installBtn" class="header-btn install-btn" style="display:none;" onclick="installApp()" title="Install App">
+                <i class="fas fa-download"></i>
+                <span class="install-label">Install</span>
+            </button>
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="header-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" onclick="installApp()">
+        <i class="fas fa-download"></i>
+        <span style="margin:0 8px;">Install Victory Life CMS on your device</span>
+        <button>Install Now</button>
+        <span class="close-banner" onclick="event.stopPropagation();dismissInstallBanner()">×</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item active" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Integration</span>
+                <span class="page-subtitle">Import, export and backup data</span>
+            </div>
+        </div>
+
+        <div class="settings-container" style="max-width:800px;margin:0 auto;">
+
+            <!-- Export Section -->
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-download"></i> Export Data</h3>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <button class="btn-secondary" onclick="IntegrationModule.exportMembersCSV()">
+                        <i class="fas fa-users"></i> Export Members (CSV)
+                    </button>
+                    <button class="btn-secondary" onclick="IntegrationModule.exportEventsCSV()">
+                        <i class="fas fa-calendar"></i> Export Events (CSV)
+                    </button>
+                    <button class="btn-secondary" onclick="IntegrationModule.exportGivingCSV()">
+                        <i class="fas fa-coins"></i> Export Giving (CSV)
+                    </button>
+                    <button class="btn-primary" onclick="IntegrationModule.exportFullBackup()">
+                        <i class="fas fa-database"></i> Full Backup (JSON)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-upload"></i> Import Data</h3>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <button class="btn-secondary" onclick="document.getElementById('importMembersCSV').click()">
+                        <i class="fas fa-users"></i> Import Members (CSV)
+                    </button>
+                    <input type="file" id="importMembersCSV" accept=".csv" style="display:none;" onchange="IntegrationModule.importMembersCSV(event)">
+                    <button class="btn-secondary" onclick="document.getElementById('importEventsCSV').click()">
+                        <i class="fas fa-calendar"></i> Import Events (CSV)
+                    </button>
+                    <input type="file" id="importEventsCSV" accept=".csv" style="display:none;" onchange="IntegrationModule.importEventsCSV(event)">
+                    <button class="btn-primary" onclick="document.getElementById('importFullBackup').click()">
+                        <i class="fas fa-database"></i> Import Full Backup (JSON)
+                    </button>
+                    <input type="file" id="importFullBackup" accept=".json" style="display:none;" onchange="IntegrationModule.importFullBackup(event)">
+                </div>
+                <div style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);">
+                    <i class="fas fa-info-circle"></i> CSV format: First row must be headers
+                </div>
+            </div>
+
+            <!-- Push Notifications -->
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-bell"></i> Push Notifications</h3>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <button class="btn-primary" onclick="NotificationsModule.requestPermission()">
+                        <i class="fas fa-check"></i> Enable Notifications
+                    </button>
+                    <button class="btn-secondary" onclick="NotificationsModule.sendTestNotification()">
+                        <i class="fas fa-paper-plane"></i> Send Test Notification
+                    </button>
+                    <button class="btn-secondary" onclick="NotificationsModule.sendBirthdayNotifications()">
+                        <i class="fas fa-birthday-cake"></i> Send Birthday Wishes
+                    </button>
+                </div>
+                <div style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);">
+                    <i class="fas fa-info-circle"></i> Browser notifications require permission
+                </div>
+            </div>
+
+            <!-- Event Reminders -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-envelope"></i> Event Reminders</h3>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="sendBulkReminders()">
+                        <i class="fas fa-bell"></i> Send Reminders for All Upcoming Events
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/modules/notifications.js"></script>
+    <script src="../../assets/js/modules/integration.js"></script>
+    <script src="../../assets/js/app.js"></script>
+
+    <script>
+        function sendBulkReminders() {
+            const events = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; });
+            if (events.length === 0) {
+                showToast('No upcoming events to send reminders for', 'warning');
+                return;
+            }
+
+            let sent = 0;
+            events.forEach(function(e) {
+                const result = EventsModule.sendReminder(e.id);
+                if (result) sent++;
+            });
+
+            showToast('Sent reminders for ' + sent + ' events', 'success');
+        }
+
+        (function() {
+            if (!isAuthenticated()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+            updateSidebarUser();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+        })();
+    </script>
+</body>
+</html>

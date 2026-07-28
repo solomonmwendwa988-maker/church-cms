@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Members - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item active" data-page="members" onclick="window.location.href='index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Members</span>
+                <span class="page-subtitle">Manage your church members</span>
+            </div>
+        </div>
+
+        <div id="pageContent">
+            <!-- Content loaded by JavaScript -->
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // Override navigateTo for this page
+        window.navigateTo = function(page) {
+            window.location.href = '../' + page + '/index.html';
+        };
+
+        // Render members on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('pageContent');
+            if (container) renderMembersPage(container);
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+        });
+    </script>
+</body>
+</html>

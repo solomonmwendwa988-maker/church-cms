@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h2>Generating PWA Icons...</h2>
+    <p>Check your browser's download folder for the icons.</p>
+    <button onclick="generateIcons()">Generate Icons</button>
+
+    <script>
+        function generateIcons() {
+            const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+            const colors = ['#2563eb', '#1d4ed8', '#1e40af', '#2563eb', '#1d4ed8', '#1e40af', '#2563eb', '#1d4ed8'];
+
+            sizes.forEach((size, index) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Background
+                const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+                gradient.addColorStop(0, '#3b82f6');
+                gradient.addColorStop(1, '#1d4ed8');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cross
+                ctx.fillStyle = 'white';
+                const crossSize = size * 0.5;
+                const barWidth = size * 0.12;
+                const centerX = size / 2;
+                const centerY = size / 2;
+
+                // Vertical bar
+                ctx.fillRect(centerX - barWidth/2, centerY - crossSize/2, barWidth, crossSize);
+                // Horizontal bar
+                ctx.fillRect(centerX - crossSize/2, centerY - barWidth/2, crossSize, barWidth);
+
+                // Download
+                const link = document.createElement('a');
+                link.download = `icon-${size}x${size}.png`;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            alert('Icons generated! Check your downloads folder.');
+        }
+    </script>
+</body>
+</html>

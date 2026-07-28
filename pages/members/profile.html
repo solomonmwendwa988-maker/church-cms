@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Profile - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item active" data-page="members" onclick="window.location.href='index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Member Profile</span>
+                <span class="page-subtitle" id="profileName">Loading...</span>
+            </div>
+        </div>
+
+        <div id="pageContent">
+            <!-- Content loaded by JavaScript -->
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const memberId = urlParams.get('id');
+
+        if (!memberId) {
+            window.location.href = 'index.html';
+        }
+
+        const member = DB.get('members', memberId);
+
+        if (!member) {
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('profileName').textContent = member.firstName + ' ' + member.lastName;
+        document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+
+        const container = document.getElementById('pageContent');
+
+        // Get giving history
+        const fullName = member.firstName + ' ' + member.lastName;
+        const giving = DB.getAll('giving').filter(g => g.memberName === fullName);
+        const totalGiving = giving.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
+
+        container.innerHTML = `
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                        <div style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;">
+                            ${member.firstName[0]}${member.lastName[0]}
+                        </div>
+                        <div>
+                            <h2 style="font-size:1.3rem;">${member.firstName} ${member.lastName}</h2>
+                            <span class="item-status ${member.status === 'Active' ? 'active' : 'pending'}">${member.status}</span>
+                            <span style="margin-left:8px;font-size:0.85rem;color:var(--text-secondary);">${member.membershipType}</span>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div><strong>Email</strong><br>${member.email || 'N/A'}</div>
+                        <div><strong>Phone</strong><br>${member.phone || 'N/A'}</div>
+                        <div><strong>Address</strong><br>${member.address || 'N/A'}</div>
+                        <div><strong>Join Date</strong><br>${formatDate(member.joinDate)}</div>
+                    </div>
+                    ${member.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><strong>Notes</strong><br>${member.notes}</div>` : ''}
+                    <div style="margin-top:16px;display:flex;gap:8px;">
+                        <button class="btn-sm" onclick="window.location.href='add.html?id=${member.id}'">Edit</button>
+                        <button class="btn-sm" onclick="window.location.href='index.html'">Back</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-hand-holding-heart"></i> Giving History</h3>
+                    </div>
+                    ${giving.length > 0 ? `
+                        <div style="margin-bottom:12px;">
+                            <strong>Total Given:</strong> ${formatCurrency(totalGiving)}
+                        </div>
+                        ${giving.slice(0, 10).map(g => `
+                            <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                                <div>
+                                    <div style="font-weight:500;">${formatCurrency(g.amount)}</div>
+                                    <div style="font-size:0.75rem;color:var(--text-secondary);">${g.category} · ${g.paymentMethod}</div>
+                                </div>
+                                <div style="font-size:0.75rem;color:var(--text-secondary);">${formatDate(g.date)}</div>
+                            </div>
+                        `).join('')}
+                        ${giving.length > 10 ? `<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:0.85rem;">+ ${giving.length - 10} more records</div>` : ''}
+                    ` : '<div style="padding:16px;text-align:center;color:var(--text-muted);">No giving records found</div>'}
+                </div>
+            </div>
+        `;
+    </script>
+</body>
+</html>

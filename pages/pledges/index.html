@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pledges - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="attendance" onclick="window.location.href='../attendance/index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="sermons" onclick="window.location.href='../sermons/index.html'">
+                <i class="fas fa-bible"></i> Sermons
+                <span class="badge" id="sermonBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="prayer" onclick="window.location.href='../prayer/index.html'">
+                <i class="fas fa-pray"></i> Prayer
+                <span class="badge" id="prayerBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="budget" onclick="window.location.href='../budget/index.html'">
+                <i class="fas fa-chart-pie"></i> Budget
+            </button>
+            <button class="nav-item active" data-page="pledges" onclick="window.location.href='index.html'">
+                <i class="fas fa-handshake"></i> Pledges
+                <span class="badge" id="pledgeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="notifications" onclick="window.location.href='../notifications/index.html'">
+                <i class="fas fa-bell"></i> Notifications
+                <span class="badge" id="notifBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="users" onclick="window.location.href='../users/index.html'">
+                <i class="fas fa-user-cog"></i> Users
+                <span class="badge" id="userBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="media" onclick="window.location.href='../media/index.html'">
+                <i class="fas fa-photo-video"></i> Media
+                <span class="badge" id="mediaBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Pledge Management</span>
+                <span class="page-subtitle">Track member pledges and contributions</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openAddPledgeModal()">
+                <i class="fas fa-plus"></i> Add Pledge
+            </button>
+            <button class="btn-secondary" onclick="renderPledges()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+
+        <div class="stats-grid" id="pledgeStats">
+            <div class="stat-card"><div class="stat-value" id="totalPledged">0</div><div class="stat-label">Total Pledged</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalPaid">0</div><div class="stat-label">Total Paid</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalBalance">0</div><div class="stat-label">Total Balance</div></div>
+            <div class="stat-card"><div class="stat-value" id="activePledges">0</div><div class="stat-label">Active Pledges</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-handshake"></i> All Pledges</h3>
+                <span style="font-size:0.85rem;color:var(--text-secondary);">Total: <span id="pledgeTotal">0</span></span>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Category</th>
+                            <th>Pledged</th>
+                            <th>Paid</th>
+                            <th>Balance</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pledgesTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <!-- Add/Edit Pledge Modal -->
+    <div class="modal-overlay" id="pledgeModal">
+        <div class="modal">
+            <h2 id="pledgeModalTitle">Add Pledge</h2>
+            <form id="pledgeForm">
+                <input type="hidden" id="pledgeId">
+                <div class="form-group">
+                    <label>Member</label>
+                    <select id="pledgeMember" required>
+                        <option value="">Select Member</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="pledgeCategory">
+                        <option value="Building Fund">Building Fund</option>
+                        <option value="Missions">Missions</option>
+                        <option value="Church Operations">Church Operations</option>
+                        <option value="Benevolence">Benevolence</option>
+                        <option value="Youth Ministry">Youth Ministry</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Amount</label>
+                        <input type="number" step="0.01" id="pledgeAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount Paid</label>
+                        <input type="number" step="0.01" id="pledgePaid" value="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="pledgeStartDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="date" id="pledgeEndDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="pledgeStatus">
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="pledgeNotes"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('pledgeModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Pledge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // POPULATE MEMBER SELECT
+        // ============================================
+        function populateMemberSelect() {
+            var members = DB.getAll('members');
+            var select = document.getElementById('pledgeMember');
+            select.innerHTML = '<option value="">Select Member</option>' +
+                members.map(function(m) {
+                    return '<option value="' + m.id + '">' + m.firstName + ' ' + m.lastName + '</option>';
+                }).join('');
+        }
+
+        // ============================================
+        // RENDER PLEDGES
+        // ============================================
+        function renderPledges() {
+            var pledges = DB.getAll('pledges');
+            var table = document.getElementById('pledgesTable');
+
+            document.getElementById('pledgeTotal').textContent = pledges.length;
+            document.getElementById('pledgeBadge').textContent = pledges.length;
+
+            var totalPledged = pledges.reduce(function(sum, p) { return sum + (parseFloat(p.amount) || 0); }, 0);
+            var totalPaid = pledges.reduce(function(sum, p) { return sum + (parseFloat(p.paid) || 0); }, 0);
+            var totalBalance = totalPledged - totalPaid;
+            var active = pledges.filter(function(p) { return p.status === 'active'; }).length;
+
+            document.getElementById('totalPledged').textContent = formatCurrency(totalPledged);
+            document.getElementById('totalPaid').textContent = formatCurrency(totalPaid);
+            document.getElementById('totalBalance').textContent = formatCurrency(totalBalance);
+            document.getElementById('activePledges').textContent = active;
+
+            if (pledges.length === 0) {
+                table.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No pledges found</td></tr>';
+                return;
+            }
+
+            table.innerHTML = pledges.map(function(p) {
+                var amount = parseFloat(p.amount) || 0;
+                var paid = parseFloat(p.paid) || 0;
+                var balance = amount - paid;
+                var percentage = amount > 0 ? Math.round((paid / amount) * 100) : 0;
+                var statusColor = p.status === 'active' ? 'active' : p.status === 'completed' ? 'completed' : 'pending';
+
+                return `
+                    <tr>
+                        <td><strong>${p.memberName || 'Unknown'}</strong></td>
+                        <td>${p.category || 'General'}</td>
+                        <td>${formatCurrency(amount)}</td>
+                        <td style="color:var(--success);">${formatCurrency(paid)}</td>
+                        <td style="color:${balance > 0 ? 'var(--danger)' : 'var(--success)'};">${formatCurrency(balance)}</td>
+                        <td style="width:100px;">
+                            <div style="height:6px;background:var(--border);border-radius:10px;overflow:hidden;">
+                                <div style="height:100%;width:${Math.min(percentage, 100)}%;background:${percentage >= 100 ? 'var(--success)' : 'var(--primary)'};border-radius:10px;"></div>
+                            </div>
+                            <span style="font-size:0.75rem;color:var(--text-secondary);">${percentage}%</span>
+                        </td>
+                        <td><span class="item-status ${statusColor}">${p.status}</span></td>
+                        <td>
+                            <button class="btn-sm" onclick="editPledge('${p.id}')">Edit</button>
+                            <button class="btn-sm" onclick="recordPledgePayment('${p.id}')" style="color:var(--success);">Pay</button>
+                            <button class="btn-sm" onclick="deletePledge('${p.id}')" style="color:var(--danger);">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // ADD/EDIT PLEDGE
+        // ============================================
+        function openAddPledgeModal() {
+            document.getElementById('pledgeModalTitle').textContent = 'Add Pledge';
+            document.getElementById('pledgeForm').reset();
+            document.getElementById('pledgeId').value = '';
+            document.getElementById('pledgeStartDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('pledgeModal').classList.add('active');
+            populateMemberSelect();
+        }
+
+        function editPledge(id) {
+            var pledge = DB.get('pledges', id);
+            if (!pledge) return;
+
+            document.getElementById('pledgeModalTitle').textContent = 'Edit Pledge';
+            document.getElementById('pledgeId').value = pledge.id;
+            document.getElementById('pledgeMember').value = pledge.memberId || '';
+            document.getElementById('pledgeCategory').value = pledge.category || '';
+            document.getElementById('pledgeAmount').value = pledge.amount || '';
+            document.getElementById('pledgePaid').value = pledge.paid || 0;
+            document.getElementById('pledgeStartDate').value = pledge.startDate || '';
+            document.getElementById('pledgeEndDate').value = pledge.endDate || '';
+            document.getElementById('pledgeStatus').value = pledge.status || 'active';
+            document.getElementById('pledgeNotes').value = pledge.notes || '';
+            document.getElementById('pledgeModal').classList.add('active');
+            populateMemberSelect();
+        }
+
+        function recordPledgePayment(id) {
+            var pledge = DB.get('pledges', id);
+            if (!pledge) return;
+
+            var amount = parseFloat(prompt('Enter payment amount:', '0'));
+            if (isNaN(amount) || amount <= 0) return;
+
+            var newPaid = (parseFloat(pledge.paid) || 0) + amount;
+            var totalAmount = parseFloat(pledge.amount) || 0;
+            var status = newPaid >= totalAmount ? 'completed' : pledge.status;
+
+            DB.update('pledges', id, {
+                paid: newPaid,
+                status: status
+            });
+
+            // Also record in giving
+            DB.add('giving', {
+                memberId: pledge.memberId || '',
+                memberName: pledge.memberName || 'Unknown',
+                amount: amount,
+                category: 'Pledge Payment - ' + (pledge.category || 'General'),
+                paymentMethod: 'Cash',
+                date: new Date().toISOString().split('T')[0],
+                receiptNumber: 'RCP-' + Date.now().toString().slice(-6),
+                notes: 'Pledge payment for ' + (pledge.category || 'General')
+            });
+
+            renderPledges();
+            showToast('Payment recorded successfully', 'success');
+        }
+
+        document.getElementById('pledgeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var id = document.getElementById('pledgeId').value;
+            var memberId = document.getElementById('pledgeMember').value;
+            var member = DB.get('members', memberId);
+
+            var data = {
+                memberId: memberId || '',
+                memberName: member ? member.firstName + ' ' + member.lastName : 'Unknown',
+                category: document.getElementById('pledgeCategory').value,
+                amount: parseFloat(document.getElementById('pledgeAmount').value) || 0,
+                paid: parseFloat(document.getElementById('pledgePaid').value) || 0,
+                startDate: document.getElementById('pledgeStartDate').value,
+                endDate: document.getElementById('pledgeEndDate').value || '',
+                status: document.getElementById('pledgeStatus').value,
+                notes: document.getElementById('pledgeNotes').value.trim()
+            };
+
+            if (id) {
+                DB.update('pledges', id, data);
+                showToast('Pledge updated successfully', 'success');
+            } else {
+                DB.add('pledges', data);
+                showToast('Pledge added successfully', 'success');
+            }
+
+            closeModal('pledgeModal');
+            renderPledges();
+        });
+
+        // ============================================
+        // DELETE PLEDGE
+        // ============================================
+        function deletePledge(id) {
+            if (confirm('Delete this pledge?')) {
+                DB.delete('pledges', id);
+                renderPledges();
+                showToast('Pledge deleted', 'info');
+            }
+        }
+
+        // ============================================
+        // CLOSE MODAL
+        // ============================================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPledges();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+            document.getElementById('mediaBadge').textContent = DB.getAll('media').length;
+            document.getElementById('sermonBadge').textContent = DB.getAll('sermons').length;
+            document.getElementById('prayerBadge').textContent = DB.getAll('prayerRequests').filter(function(p) { return p.status === 'active'; }).length;
+            document.getElementById('pledgeBadge').textContent = DB.getAll('pledges').length;
+            document.getElementById('notifBadge').textContent = DB.getAll('notifications').filter(function(n) { return n.status === 'pending'; }).length;
+            document.getElementById('userBadge').textContent = DB.getAll('users').length;
+        });
+    </script>
+</body>
+</html>

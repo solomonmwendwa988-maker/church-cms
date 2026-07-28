@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check In - Victory Life CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <a href="#" class="brand">
+                <div class="logo-icon">✝</div>
+                <span>Victory <span class="highlight">Life</span></span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" onclick="showNotification()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot active" id="notifDot"></span>
+            </button>
+            <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme" id="themeBtn">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="../auth/login.html" class="header-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-page="dashboard" onclick="window.location.href='../dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="nav-item" data-page="members" onclick="window.location.href='../members/index.html'">
+                <i class="fas fa-users"></i> Members
+                <span class="badge" id="memberBadge">0</span>
+            </button>
+            <button class="nav-item active" data-page="attendance" onclick="window.location.href='index.html'">
+                <i class="fas fa-clipboard-check"></i> Attendance
+            </button>
+            <button class="nav-item" data-page="finance" onclick="window.location.href='../finance/index.html'">
+                <i class="fas fa-coins"></i> Finance
+                <span class="badge" id="financeBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="events" onclick="window.location.href='../events/index.html'">
+                <i class="fas fa-calendar-alt"></i> Events
+                <span class="badge" id="eventBadge">0</span>
+            </button>
+            <button class="nav-item" data-page="reports" onclick="window.location.href='../reports/index.html'">
+                <i class="fas fa-file-alt"></i> Reports
+            </button>
+            <button class="nav-item" data-page="settings" onclick="window.location.href='../settings/index.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name">Admin User</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="page-title">Mark Attendance</span>
+                <span class="page-subtitle">Check in members for service</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <form id="attendanceForm">
+                <div class="form-group">
+                    <label>Member</label>
+                    <select id="memberSelect" required>
+                        <option value="">Select Member</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Service Type</label>
+                        <select id="serviceType">
+                            <option value="Sunday Morning">Sunday Morning</option>
+                            <option value="Sunday Evening">Sunday Evening</option>
+                            <option value="Midweek Service">Midweek Service</option>
+                            <option value="Youth Service">Youth Service</option>
+                            <option value="Special Service">Special Service</option>
+                            <option value="Event">Event</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="status">
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="Excused">Excused</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Check In Time</label>
+                        <input type="time" id="checkInTime">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="notes" placeholder="Additional notes..."></textarea>
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:8px;">
+                    <button type="submit" class="btn-primary"><i class="fas fa-clipboard-check"></i> Mark Attendance</button>
+                    <button type="button" class="btn-secondary" onclick="window.location.href='index.html'">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="footer">
+            Victory Life International &bull; Church Management System v2.0
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+    <script>
+    // ============================================
+    // AUTHENTICATION CHECK - RUNS FIRST
+    // ============================================
+    (function checkAuth() {
+        // If not authenticated, redirect to login
+        if (!isAuthenticated()) {
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        // Update user info in sidebar
+        var user = getCurrentUser();
+        if (user) {
+            var avatarEl = document.getElementById('userAvatar');
+            var nameEl = document.getElementById('userName');
+            var roleEl = document.getElementById('userRole');
+
+            if (avatarEl) avatarEl.textContent = user.avatar || user.name.charAt(0).toUpperCase();
+            if (nameEl) nameEl.textContent = user.name || 'Admin User';
+            if (roleEl) roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator';
+
+            var subtitleEl = document.getElementById('pageSubtitle');
+            if (subtitleEl) subtitleEl.textContent = 'Welcome back, ' + (user.name || 'Admin');
+        }
+    })();
+</script>
+    <script src="../../assets/js/data.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    <script src="../../assets/js/app.js"></script>
+    <script>
+        // ============================================
+        // POPULATE MEMBER SELECT
+        // ============================================
+        function populateMembers() {
+            var members = DB.getAll('members');
+            var select = document.getElementById('memberSelect');
+            if (!select) return;
+
+            var options = '<option value="">Select Member</option>';
+
+            members.forEach(function(m) {
+                if (m.status === 'Active') {
+                    options += '<option value="' + m.id + '">' + m.firstName + ' ' + m.lastName + ' (' + (m.phone || 'N/A') + ')</option>';
+                }
+            });
+
+            select.innerHTML = options;
+        }
+
+        // ============================================
+        // SET DEFAULT DATE AND TIME
+        // ============================================
+        function setDefaults() {
+            var today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').value = today;
+
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('checkInTime').value = hours + ':' + minutes;
+        }
+
+        // ============================================
+        // FORM SUBMISSION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            populateMembers();
+            setDefaults();
+
+            document.getElementById('memberBadge').textContent = DB.getAll('members').length;
+            document.getElementById('eventBadge').textContent = DB.getAll('events').filter(function(e) { return e.status === 'Upcoming'; }).length;
+            document.getElementById('financeBadge').textContent = DB.getAll('giving').length;
+
+            document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                var memberId = document.getElementById('memberSelect').value;
+                var member = DB.get('members', memberId);
+
+                if (!member) {
+                    showToast('Please select a member', 'error');
+                    return;
+                }
+
+                var data = {
+                    memberId: member.id,
+                    memberName: member.firstName + ' ' + member.lastName,
+                    serviceType: document.getElementById('serviceType').value,
+                    date: document.getElementById('date').value,
+                    status: document.getElementById('status').value,
+                    checkInTime: document.getElementById('checkInTime').value,
+                    notes: document.getElementById('notes').value.trim()
+                };
+
+                DB.add('attendance', data);
+                showToast('Attendance marked for ' + data.memberName, 'success');
+
+                // Reset form
+                document.getElementById('memberSelect').value = '';
+                document.getElementById('status').value = 'Present';
+                document.getElementById('notes').value = '';
+
+                setTimeout(function() {
+                    window.location.href = 'index.html';
+                }, 1500);
+            });
+        });
+    </script>
+</body>
+</html>
